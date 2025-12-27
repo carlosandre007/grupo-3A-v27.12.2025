@@ -26,7 +26,8 @@ const CashFlow: React.FC = () => {
     category: '',
     value: '',
     type: 'in' as 'in' | 'out',
-    date: new Date().toISOString().split('T')[0]
+    date: new Date().toISOString().split('T')[0],
+    id: ''
   });
 
   // Category Form States
@@ -36,6 +37,7 @@ const CashFlow: React.FC = () => {
     type: 'in' as 'in' | 'out'
   });
   const [isEditingCategory, setIsEditingCategory] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
 
   const [submitting, setSubmitting] = useState(false);
 
@@ -79,28 +81,63 @@ const CashFlow: React.FC = () => {
 
     const val = parseFloat(formData.value.replace('R$', '').replace('.', '').replace(',', '.'));
 
-    const { error } = await supabase.from('transactions').insert([{
+    const dbData = {
       description: formData.description,
       category: formData.category,
       value: val,
       type: formData.type,
       date: formData.date
-    }]);
+    };
 
-    if (!error) {
-      await fetchTransactions();
-      setIsModalOpen(false);
-      setFormData({
-        description: '',
-        category: '',
-        value: '',
-        type: 'in',
-        date: new Date().toISOString().split('T')[0]
-      });
+    if (isEditing && formData.id) {
+      const { error } = await supabase
+        .from('transactions')
+        .update(dbData)
+        .eq('id', formData.id);
+
+      if (!error) {
+        await fetchTransactions();
+        handleCloseModal();
+      } else {
+        alert('Erro ao atualizar lançamento: ' + error.message);
+      }
     } else {
-      alert('Erro ao criar lançamento: ' + error.message);
+      const { error } = await supabase.from('transactions').insert([dbData]);
+
+      if (!error) {
+        await fetchTransactions();
+        handleCloseModal();
+      } else {
+        alert('Erro ao criar lançamento: ' + error.message);
+      }
     }
     setSubmitting(false);
+  };
+
+  const handleEditTransaction = (t: Transaction) => {
+    setFormData({
+      description: t.description,
+      category: t.category,
+      value: t.value.toString(),
+      type: t.type,
+      date: t.date,
+      id: t.id
+    });
+    setIsEditing(true);
+    setIsModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setIsEditing(false);
+    setFormData({
+      description: '',
+      category: '',
+      value: '',
+      type: 'in',
+      date: new Date().toISOString().split('T')[0],
+      id: ''
+    });
   };
 
   const handleCategorySubmit = async (e: React.FormEvent) => {
@@ -153,6 +190,30 @@ const CashFlow: React.FC = () => {
   };
 
   const filteredCategories = categories.filter(c => c.type === formData.type);
+
+  const handleDeleteTransaction = async (transaction: Transaction) => {
+    const transDate = new Date(transaction.date);
+    const now = new Date();
+    const hoursDiff = (now.getTime() - transDate.getTime()) / (1000 * 60 * 60);
+
+    // If it's income (receita) AND more than 24 hours old, ask for password
+    if (transaction.type === 'in' && hoursDiff > 24) {
+      const password = prompt('Esta transação tem mais de 24 horas. Insira a senha para excluir:');
+      if (password !== '4859') {
+        alert('Senha incorreta.');
+        return;
+      }
+    } else {
+      if (!confirm('Tem certeza que deseja excluir este lançamento?')) return;
+    }
+
+    const { error } = await supabase.from('transactions').delete().eq('id', transaction.id);
+    if (!error) {
+      fetchTransactions();
+    } else {
+      alert('Erro ao excluir transação: ' + error.message);
+    }
+  };
 
   return (
     <div className="space-y-6 pb-8">
@@ -214,6 +275,7 @@ const CashFlow: React.FC = () => {
                   <th className="px-6 py-4 text-[9px] font-black text-slate-400 uppercase tracking-[0.2em]">Descrição</th>
                   <th className="px-6 py-4 text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] text-right">Valor</th>
                   <th className="px-6 py-4 text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] text-center">Tipo</th>
+                  <th className="px-6 py-4 text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] text-center">Ação</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
@@ -231,6 +293,22 @@ const CashFlow: React.FC = () => {
                       <span className={`material-symbols-outlined ${t.type === 'in' ? 'text-success' : 'text-danger'}`}>
                         {t.type === 'in' ? 'arrow_downward' : 'arrow_upward'}
                       </span>
+                    </td>
+                    <td className="px-6 py-4 text-center">
+                      <div className="flex items-center justify-center gap-2">
+                        <button
+                          onClick={() => handleEditTransaction(t)}
+                          className="p-1 text-slate-400 hover:text-primary transition-all"
+                        >
+                          <span className="material-symbols-outlined text-lg">edit</span>
+                        </button>
+                        <button
+                          onClick={() => handleDeleteTransaction(t)}
+                          className="p-1 text-slate-400 hover:text-red-500 transition-all"
+                        >
+                          <span className="material-symbols-outlined text-lg">delete</span>
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -250,8 +328,8 @@ const CashFlow: React.FC = () => {
       {/* Add Transaction Modal */}
       <Modal
         isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        title="Novo Lançamento"
+        onClose={handleCloseModal}
+        title={isEditing ? "Editar Lançamento" : "Novo Lançamento"}
       >
         <form onSubmit={handleSubmit} className="space-y-4">
 

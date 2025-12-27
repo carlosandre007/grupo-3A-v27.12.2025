@@ -140,6 +140,17 @@ const ClientManagement: React.FC = () => {
     });
   };
 
+  const handleDeleteClient = async (id: string) => {
+    if (confirm('Tem certeza que deseja excluir este cliente?')) {
+      const { error } = await supabase.from('clients').delete().eq('id', id);
+      if (!error) {
+        fetchClients();
+      } else {
+        alert('Erro ao excluir cliente: ' + error.message);
+      }
+    }
+  };
+
   const filtered = clients.filter(c =>
     c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     c.cpf.includes(searchTerm)
@@ -252,6 +263,12 @@ const ClientManagement: React.FC = () => {
                   className="px-3 py-2 bg-slate-100 dark:bg-slate-900 text-slate-500 rounded-xl hover:text-primary transition-all"
                 >
                   <span className="material-symbols-outlined text-sm">edit</span>
+                </button>
+                <button
+                  onClick={() => handleDeleteClient(client.id)}
+                  className="px-3 py-2 bg-slate-100 dark:bg-slate-900 text-slate-500 rounded-xl hover:text-red-500 transition-all"
+                >
+                  <span className="material-symbols-outlined text-sm">delete</span>
                 </button>
               </div>
             </div>

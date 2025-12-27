@@ -7,9 +7,10 @@ interface SidebarProps {
   setActiveTab: (tab: NavItem) => void;
   isDarkMode: boolean;
   toggleDarkMode: () => void;
+  ipvaAlerts: number;
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, isDarkMode, toggleDarkMode }) => {
+const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, isDarkMode, toggleDarkMode, ipvaAlerts }) => {
   const handleLogout = async () => {
     await supabase.auth.signOut();
   };
@@ -18,10 +19,11 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, isDarkMode, 
     { id: NavItem.DASHBOARD, label: 'Dashboard', icon: 'dashboard' },
     { id: NavItem.CASH_FLOW, label: 'Fluxo de Caixa', icon: 'account_balance_wallet' },
     { id: NavItem.LOC_MOTTUS, label: 'LOC MOTTUS', icon: 'two_wheeler' },
-    { id: NavItem.IPVA, label: 'IPVA', icon: 'calendar_today', badge: 3 },
+    { id: NavItem.IPVA, label: 'IPVA', icon: 'calendar_today', badge: ipvaAlerts > 0 ? ipvaAlerts : undefined },
     { id: NavItem.CHARGES, label: 'Escala de Cobrança', icon: 'schedule' },
     { id: NavItem.PROPERTIES, label: 'Imóveis', icon: 'apartment' },
     { id: NavItem.CLIENTS, label: 'Clientes', icon: 'group' },
+    { id: NavItem.BANKS, label: 'Bancos', icon: 'account_balance' },
   ];
 
   return (
@@ -42,8 +44,8 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, isDarkMode, 
             key={item.id}
             onClick={() => setActiveTab(item.id)}
             className={`w-full flex items-center gap-3 px-4 py-3 text-sm font-semibold rounded-xl transition-all ${activeTab === item.id
-                ? 'bg-primary/10 text-primary-dark dark:text-primary dark:bg-primary/5 border-l-4 border-primary shadow-sm'
-                : 'text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/50 hover:text-slate-900 dark:hover:text-white'
+              ? 'bg-primary/10 text-primary-dark dark:text-primary dark:bg-primary/5 border-l-4 border-primary shadow-sm'
+              : 'text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/50 hover:text-slate-900 dark:hover:text-white'
               }`}
           >
             <span className={`material-symbols-outlined text-xl ${activeTab === item.id ? 'fill' : ''}`}>

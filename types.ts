@@ -6,7 +6,15 @@ export enum NavItem {
   IPVA = 'ipva',
   CHARGES = 'charges',
   PROPERTIES = 'properties',
-  CLIENTS = 'clients'
+  CLIENTS = 'clients',
+  BANKS = 'banks'
+}
+
+export interface Bank {
+  id: string;
+  name: string;
+  balance: number;
+  created_at?: string;
 }
 
 export interface Motorcycle {
@@ -68,6 +76,10 @@ export interface Charge {
   time?: string;
   status: 'received' | 'pending';
   receivedAt?: string;
+  frequency?: 'fixed' | 'weekly' | 'monthly';
+  dayOfWeek?: number;
+  dayOfMonth?: number;
+  isRecurring?: boolean;
 }
 
 export interface Fine {

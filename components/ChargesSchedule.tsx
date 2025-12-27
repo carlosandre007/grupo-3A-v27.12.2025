@@ -31,7 +31,11 @@ const ChargesSchedule: React.FC = () => {
     value: '',
     date: new Date().toISOString().split('T')[0],
     time: '09:00',
-    status: 'pending' as 'pending' | 'received'
+    status: 'pending' as 'pending' | 'received',
+    frequency: 'fixed' as 'fixed' | 'weekly' | 'monthly',
+    dayOfWeek: 1, // Default to Monday
+    dayOfMonth: 1,
+    isRecurring: false
   });
   const [submitting, setSubmitting] = useState(false);
 
@@ -62,7 +66,11 @@ const ChargesSchedule: React.FC = () => {
         date: item.due_date,
         time: item.time,
         status: item.status,
-        receivedAt: item.received_at
+        receivedAt: item.received_at,
+        frequency: item.frequency,
+        dayOfWeek: item.day_of_week,
+        dayOfMonth: item.day_of_month,
+        isRecurring: item.is_recurring
       }));
       setCharges(mapped);
     }
@@ -121,7 +129,11 @@ const ChargesSchedule: React.FC = () => {
       value: val,
       due_date: formData.date,
       time: formData.time,
-      status: formData.status
+      status: formData.status,
+      frequency: formData.frequency,
+      day_of_week: formData.frequency === 'weekly' ? formData.dayOfWeek : null,
+      day_of_month: formData.frequency === 'monthly' ? formData.dayOfMonth : null,
+      is_recurring: formData.isRecurring
     }]);
 
     if (!error) {
@@ -133,7 +145,11 @@ const ChargesSchedule: React.FC = () => {
         value: '',
         date: new Date().toISOString().split('T')[0],
         time: '09:00',
-        status: 'pending'
+        status: 'pending',
+        frequency: 'fixed',
+        dayOfWeek: 1,
+        dayOfMonth: 1,
+        isRecurring: false
       });
     } else {
       alert('Erro ao criar cobrança: ' + error.message);
@@ -305,6 +321,61 @@ const ChargesSchedule: React.FC = () => {
               />
             </div>
             <div>
+              <label className="block text-xs font-bold text-slate-500 mb-1">Frequência</label>
+              <select
+                value={formData.frequency}
+                onChange={(e) => setFormData({ ...formData, frequency: e.target.value as any })}
+                className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-slate-800 focus:ring-2 focus:ring-primary outline-none transition-all"
+              >
+                <option value="fixed">Única</option>
+                <option value="weekly">Semanal</option>
+                <option value="monthly">Mensal</option>
+              </select>
+            </div>
+          </div>
+
+          {formData.frequency === 'weekly' && (
+            <div>
+              <label className="block text-xs font-bold text-slate-500 mb-1">Dia da Semana</label>
+              <select
+                value={formData.dayOfWeek}
+                onChange={(e) => setFormData({ ...formData, dayOfWeek: Number(e.target.value) })}
+                className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-slate-800 focus:ring-2 focus:ring-primary outline-none transition-all"
+              >
+                {dayNames.map((name, idx) => (
+                  <option key={idx} value={idx}>{name}</option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {formData.frequency === 'monthly' && (
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-500 mb-1">Dia do Mês</label>
+                <input
+                  type="number"
+                  min="1"
+                  max="31"
+                  value={formData.dayOfMonth}
+                  onChange={(e) => setFormData({ ...formData, dayOfMonth: Number(e.target.value) })}
+                  className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-slate-800 focus:ring-2 focus:ring-primary outline-none transition-all"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-500 mb-1">Ano</label>
+                <input
+                  type="number"
+                  value={new Date(formData.date).getFullYear()}
+                  disabled
+                  className="w-full px-4 py-3 bg-slate-100 dark:bg-slate-800 border-none rounded-xl text-slate-500 font-bold"
+                />
+              </div>
+            </div>
+          )}
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
               <label className="block text-xs font-bold text-slate-500 mb-1">Hora</label>
               <input
                 type="time"
@@ -313,18 +384,31 @@ const ChargesSchedule: React.FC = () => {
                 className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-slate-800 focus:ring-2 focus:ring-primary outline-none transition-all"
               />
             </div>
+            <div>
+              <label className="block text-xs font-bold text-slate-500 mb-1">Valor (R$)</label>
+              <input
+                type="number"
+                step="0.01"
+                required
+                value={formData.value}
+                onChange={(e) => setFormData({ ...formData, value: e.target.value })}
+                className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-slate-800 focus:ring-2 focus:ring-primary outline-none transition-all"
+                placeholder="0,00"
+              />
+            </div>
           </div>
-          <div>
-            <label className="block text-xs font-bold text-slate-500 mb-1">Valor (R$)</label>
+
+          <div className="flex items-center gap-3 p-4 bg-slate-50 dark:bg-slate-900/50 rounded-2xl border border-slate-100 dark:border-slate-800">
             <input
-              type="number"
-              step="0.01"
-              required
-              value={formData.value}
-              onChange={(e) => setFormData({ ...formData, value: e.target.value })}
-              className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-slate-800 focus:ring-2 focus:ring-primary outline-none transition-all"
-              placeholder="0,00"
+              type="checkbox"
+              id="isRecurring"
+              checked={formData.isRecurring}
+              onChange={(e) => setFormData({ ...formData, isRecurring: e.target.checked })}
+              className="w-5 h-5 rounded text-primary focus:ring-primary border-slate-300 dark:border-slate-700 dark:bg-slate-800"
             />
+            <label htmlFor="isRecurring" className="text-sm font-bold text-slate-600 dark:text-slate-300 cursor-pointer">
+              Cobrança Recorrente
+            </label>
           </div>
 
           <button

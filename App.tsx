@@ -8,6 +8,7 @@ import PropertyManagement from './components/PropertyManagement';
 import CashFlow from './components/CashFlow';
 import ChargesSchedule from './components/ChargesSchedule';
 import ClientManagement from './components/ClientManagement';
+import BankManagement from './components/BankManagement';
 import Login from './components/Login';
 import { NavItem } from './types';
 import { supabase } from './lib/supabase';
@@ -18,6 +19,7 @@ const App: React.FC = () => {
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const [ipvaAlerts, setIpvaAlerts] = useState(0);
 
   useEffect(() => {
     // Initial session check
@@ -31,7 +33,39 @@ const App: React.FC = () => {
       setSession(session);
     });
 
-    return () => subscription.unsubscribe();
+    // Fetch IPVA Alerts (due within 5 days)
+    const fetchIpvaAlerts = async () => {
+      const today = new Date();
+      const next5Days = new Date();
+      next5Days.setDate(today.getDate() + 5);
+
+      const { data } = await supabase
+        .from('ipva_records')
+        .select('*')
+        .eq('status', 'pending');
+
+      if (data) {
+        const count = data.filter((item: any) => {
+          const due = new Date(item.due_date);
+          const diffTime = due.getTime() - today.getTime();
+          const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+          // Show alert if due in <= 5 days and not past (or maybe include past?)
+          // Let's include everything <= 5 days (including overdue)
+          return diffDays <= 5;
+        }).length;
+        setIpvaAlerts(count);
+      }
+    };
+
+    fetchIpvaAlerts();
+
+    // Poll every minute for updates (optional, but good for "realtime" feel)
+    const interval = setInterval(fetchIpvaAlerts, 60000);
+
+    return () => {
+      subscription.unsubscribe();
+      clearInterval(interval);
+    };
   }, []);
 
   useEffect(() => {
@@ -58,6 +92,8 @@ const App: React.FC = () => {
         return <ChargesSchedule />;
       case NavItem.CLIENTS:
         return <ClientManagement />;
+      case NavItem.BANKS:
+        return <BankManagement />;
       default:
         return <Dashboard />;
     }
@@ -82,6 +118,7 @@ const App: React.FC = () => {
         setActiveTab={setActiveTab}
         isDarkMode={isDarkMode}
         toggleDarkMode={() => setIsDarkMode(!isDarkMode)}
+        ipvaAlerts={ipvaAlerts}
       />
 
       <main className="flex-1 flex flex-col h-full bg-slate-50 dark:bg-brand-bg overflow-hidden">
