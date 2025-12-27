@@ -1,0 +1,8 @@
+{
+  "name": "GRUPO 3A - Business Intelligence & Fleet Management",
+  "description": "A comprehensive enterprise management dashboard for fleet tracking, property management, IPVA control, and financial monitoring with dark mode support.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ]
+}
