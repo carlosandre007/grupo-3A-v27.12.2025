@@ -9,6 +9,7 @@ import CashFlow from './components/CashFlow';
 import ChargesSchedule from './components/ChargesSchedule';
 import ClientManagement from './components/ClientManagement';
 import BankManagement from './components/BankManagement';
+import BackupRestore from './components/BackupRestore';
 import Login from './components/Login';
 import { NavItem } from './types';
 import { supabase } from './lib/supabase';
@@ -94,6 +95,8 @@ const App: React.FC = () => {
         return <ClientManagement />;
       case NavItem.BANKS:
         return <BankManagement />;
+      case NavItem.BACKUP:
+        return <BackupRestore />;
       default:
         return <Dashboard />;
     }

@@ -24,6 +24,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, isDarkMode, 
     { id: NavItem.PROPERTIES, label: 'Imóveis', icon: 'apartment' },
     { id: NavItem.CLIENTS, label: 'Clientes', icon: 'group' },
     { id: NavItem.BANKS, label: 'Bancos', icon: 'account_balance' },
+    { id: NavItem.BACKUP, label: 'Backup / Restaurar', icon: 'settings_backup_restore' },
   ];
 
   return (

@@ -7,7 +7,8 @@ export enum NavItem {
   CHARGES = 'charges',
   PROPERTIES = 'properties',
   CLIENTS = 'clients',
-  BANKS = 'banks'
+  BANKS = 'banks',
+  BACKUP = 'backup'
 }
 
 export interface Bank {
