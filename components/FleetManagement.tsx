@@ -44,7 +44,7 @@ const FleetManagement: React.FC = () => {
     const { data, error } = await supabase
       .from('motorcycles')
       .select('*')
-      .order('created_at', { ascending: false });
+      .order('code', { ascending: true });
 
     if (!error && data) {
       const mapped = data.map((item: any) => ({
@@ -275,8 +275,8 @@ const FleetManagement: React.FC = () => {
             <table className="w-full text-left">
               <thead>
                 <tr className="bg-slate-50 dark:bg-slate-900/50">
-                  <th className="px-6 py-4 text-xs font-black text-slate-400 uppercase tracking-widest">Veículo</th>
                   <th className="px-6 py-4 text-xs font-black text-slate-400 uppercase tracking-widest">Detalhes</th>
+                  <th className="px-6 py-4 text-xs font-black text-slate-400 uppercase tracking-widest">Veículo</th>
                   <th className="px-6 py-4 text-xs font-black text-slate-400 uppercase tracking-widest">Placa</th>
                   <th className="px-6 py-4 text-xs font-black text-slate-400 uppercase tracking-widest pl-10">Status / Cliente</th>
                   <th className="px-6 py-4 text-xs font-black text-slate-400 uppercase tracking-widest text-right">KM</th>
@@ -287,18 +287,18 @@ const FleetManagement: React.FC = () => {
                 {filtered.map((m) => (
                   <tr key={m.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors group">
                     <td className="px-6 py-4">
+                      <div className="flex items-baseline gap-2">
+                        <span className="text-base font-black text-slate-900 dark:text-white leading-none">{m.code}</span>
+                        <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-tight">{m.model}</span>
+                      </div>
+                      <div className="text-[10px] text-slate-400 font-medium mt-0.5">{m.color} • {m.year}</div>
+                    </td>
+                    <td className="px-6 py-4">
                       <div className="w-16 h-12 bg-slate-100 dark:bg-slate-800 rounded-lg flex items-center justify-center">
                         <span className={`material-symbols-outlined text-4xl ${getAvatarColor(m.color)}`}>
                           two_wheeler
                         </span>
                       </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-2">
-                        <span className="font-mono text-xs font-black bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded text-slate-500">{m.code}</span>
-                        <span className="text-sm font-black text-slate-900 dark:text-white">{m.model}</span>
-                      </div>
-                      <div className="text-xs text-slate-400 font-medium mt-1">{m.color} • {m.year}</div>
                     </td>
                     <td className="px-6 py-4">
                       <span className="text-sm font-mono text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded-lg">{m.plate}</span>
