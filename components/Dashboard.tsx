@@ -95,26 +95,50 @@ const Dashboard: React.FC = () => {
   }, [transactions, selectedMonth, selectedYear]);
 
   const fetchAlerts = async () => {
-    const { data: clients } = await supabase.from('clients').select('cnh_expiry, status');
+    // Check CNH
+    const { data: drivers } = await supabase.from('drivers').select('*');
     let cnhCount = 0;
-    if (clients) {
+    if (drivers) {
       const today = new Date();
-      const thirtyDaysFromNow = new Date();
-      thirtyDaysFromNow.setDate(today.getDate() + 30);
-      cnhCount = clients.filter((c: any) => {
-        if (!c.cnh_expiry) return false;
-        const expiry = new Date(c.cnh_expiry);
-        return expiry <= thirtyDaysFromNow;
+      cnhCount = drivers.filter((d: any) => {
+        const expiry = new Date(d.cnh_expiry);
+        const diffTime = expiry.getTime() - today.getTime();
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        return diffDays <= 30;
       }).length;
     }
 
-    let finesCount = 0;
-    try {
-      const { data: fines } = await supabase.from('fines').select('id').eq('status', 'pending');
-      if (fines) finesCount = fines.length;
-    } catch { }
+    // Check Fines (Multas)
+    const { count: finesCount } = await supabase
+      .from('ipva_records')
+      .select('*', { count: 'exact', head: true })
+      .eq('status', 'overdue');
 
-    setAlerts({ cnh: cnhCount, fines: finesCount });
+    // Check Overdue Charges (> 3 days)
+    const { data: charges } = await supabase
+      .from('charges')
+      .select('*')
+      .eq('status', 'pending');
+
+    let overdueChargesCount = 0;
+    if (charges) {
+      const today = new Date();
+      // Calculate date 3 days ago
+      const threeDaysAgo = new Date();
+      threeDaysAgo.setDate(today.getDate() - 3);
+
+      overdueChargesCount = charges.filter((c: any) => {
+        const dueDate = new Date(c.due_date);
+        // If due date is BEFORE (less than) 3 days ago, it's overdue by > 3 days
+        return dueDate < threeDaysAgo;
+      }).length;
+    }
+
+    setAlerts({
+      cnh: cnhCount,
+      fines: finesCount || 0,
+      overdueCharges: overdueChargesCount
+    });
   };
 
   const handleBackup = async () => {
@@ -197,7 +221,7 @@ const Dashboard: React.FC = () => {
       </PageHeader>
 
       {/* Alerts */}
-      {(alerts.cnh > 0 || alerts.fines > 0) && (
+      {(alerts.cnh > 0 || alerts.fines > 0 || alerts.overdueCharges > 0) && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {alerts.cnh > 0 && (
             <div className="bg-red-50 dark:bg-red-900/20 border-l-4 border-red-500 p-4 rounded-r-xl flex items-center justify-between">
@@ -217,6 +241,17 @@ const Dashboard: React.FC = () => {
                 <div>
                   <h4 className="font-bold text-orange-700 dark:text-orange-400 text-sm">Multas Pendentes</h4>
                   <p className="text-xs text-orange-600 dark:text-orange-300">{alerts.fines} multas aguardando resolução.</p>
+                </div>
+              </div>
+            </div>
+          )}
+          {alerts.overdueCharges > 0 && (
+            <div className="bg-rose-50 dark:bg-rose-900/20 border-l-4 border-rose-500 p-4 rounded-r-xl flex items-center justify-between md:col-span-2">
+              <div className="flex items-center gap-4">
+                <span className="material-symbols-outlined text-rose-500">price_check</span>
+                <div>
+                  <h4 className="font-bold text-rose-700 dark:text-rose-400 text-sm">Cobranças Atrasadas (+3 dias)</h4>
+                  <p className="text-xs text-rose-600 dark:text-rose-300">Existem {alerts.overdueCharges} cobranças atrasadas há mais de 3 dias.</p>
                 </div>
               </div>
             </div>

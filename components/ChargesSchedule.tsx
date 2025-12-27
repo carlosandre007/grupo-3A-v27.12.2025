@@ -30,7 +30,6 @@ const ChargesSchedule: React.FC = () => {
     ref: '',
     value: '',
     date: new Date().toISOString().split('T')[0],
-    time: '09:00',
     status: 'pending' as 'pending' | 'received',
     frequency: 'fixed' as 'fixed' | 'weekly' | 'monthly',
     dayOfWeek: 1, // Default to Monday
@@ -105,6 +104,19 @@ const ChargesSchedule: React.FC = () => {
     }
   };
 
+  const handleDeleteCharge = async (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!confirm('Tem certeza que deseja excluir esta cobrança?')) return;
+
+    const { error } = await supabase.from('charges').delete().eq('id', id);
+
+    if (error) {
+      alert('Erro ao excluir: ' + error.message);
+    } else {
+      fetchCharges();
+    }
+  };
+
   const handlePreviousWeek = () => {
     const newDate = new Date(currentDate);
     newDate.setDate(newDate.getDate() - 7);
@@ -128,7 +140,7 @@ const ChargesSchedule: React.FC = () => {
       ref: formData.ref,
       value: val,
       due_date: formData.date,
-      time: formData.time,
+      time: null,
       status: formData.status,
       frequency: formData.frequency,
       day_of_week: formData.frequency === 'weekly' ? formData.dayOfWeek : null,
@@ -144,7 +156,6 @@ const ChargesSchedule: React.FC = () => {
         ref: '',
         value: '',
         date: new Date().toISOString().split('T')[0],
-        time: '09:00',
         status: 'pending',
         frequency: 'fixed',
         dayOfWeek: 1,
@@ -218,13 +229,22 @@ const ChargesSchedule: React.FC = () => {
                       <div
                         key={charge.id}
                         onClick={() => toggleCharge(charge)}
-                        className={`p-3 rounded-2xl border transition-all cursor-pointer group flex flex-col gap-2 ${isDone
+                        className={`relative p-3 rounded-2xl border transition-all cursor-pointer group flex flex-col gap-2 ${isDone
                           ? 'bg-green-50/50 dark:bg-green-900/10 border-green-100 dark:border-green-900/30'
                           : 'bg-white dark:bg-slate-800/50 border-slate-100 dark:border-slate-800 hover:border-primary/50'
                           }`}
                       >
+                        {/* Delete Button */}
+                        <button
+                          onClick={(e) => handleDeleteCharge(charge.id, e)}
+                          className="absolute top-2 right-2 p-1 text-slate-300 hover:text-red-500 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700 transition-all opacity-0 group-hover:opacity-100 z-10"
+                          title="Excluir cobrança"
+                        >
+                          <span className="material-symbols-outlined text-xs font-bold">delete</span>
+                        </button>
+
                         <div className="flex items-start justify-between">
-                          <div className="flex-1">
+                          <div className="flex-1 pr-4">
                             <p className={`text-xs font-black transition-all ${isDone ? 'text-green-700 dark:text-green-400 line-through opacity-50' : 'text-slate-900 dark:text-white'}`}>
                               {charge.clientName}
                             </p>
@@ -237,7 +257,6 @@ const ChargesSchedule: React.FC = () => {
                         </div>
                         <div className="flex items-center justify-between mt-1">
                           <span className="text-[10px] font-black text-slate-900 dark:text-white">R$ {Number(charge.value).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
-                          <span className="text-[9px] font-bold text-slate-400">{charge.time ? charge.time.slice(0, 5) : '--:--'}</span>
                         </div>
                       </div>
                     );
@@ -374,28 +393,17 @@ const ChargesSchedule: React.FC = () => {
             </div>
           )}
 
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-bold text-slate-500 mb-1">Hora</label>
-              <input
-                type="time"
-                value={formData.time}
-                onChange={(e) => setFormData({ ...formData, time: e.target.value })}
-                className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-slate-800 focus:ring-2 focus:ring-primary outline-none transition-all"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-bold text-slate-500 mb-1">Valor (R$)</label>
-              <input
-                type="number"
-                step="0.01"
-                required
-                value={formData.value}
-                onChange={(e) => setFormData({ ...formData, value: e.target.value })}
-                className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-slate-800 focus:ring-2 focus:ring-primary outline-none transition-all"
-                placeholder="0,00"
-              />
-            </div>
+          <div className="col-span-2">
+            <label className="block text-xs font-bold text-slate-500 mb-1">Valor (R$)</label>
+            <input
+              type="number"
+              step="0.01"
+              required
+              value={formData.value}
+              onChange={(e) => setFormData({ ...formData, value: e.target.value })}
+              className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-slate-800 focus:ring-2 focus:ring-primary outline-none transition-all"
+              placeholder="0,00"
+            />
           </div>
 
           <div className="flex items-center gap-3 p-4 bg-slate-50 dark:bg-slate-900/50 rounded-2xl border border-slate-100 dark:border-slate-800">
@@ -420,7 +428,7 @@ const ChargesSchedule: React.FC = () => {
           </button>
         </form>
       </Modal>
-    </div>
+    </div >
   );
 };
 

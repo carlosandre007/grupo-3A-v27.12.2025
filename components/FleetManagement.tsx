@@ -29,6 +29,16 @@ const FleetManagement: React.FC = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
+  // Maintenance State
+  const [maintenanceRecords, setMaintenanceRecords] = useState<any[]>([]);
+  const [newMaintenance, setNewMaintenance] = useState({
+    date: new Date().toISOString().split('T')[0],
+    description: '',
+    value: '',
+    type: 'debit' as 'credit' | 'debit' // credit = receita, debit = despesa
+  });
+  const [maintenanceLoading, setMaintenanceLoading] = useState(false);
+
   const fetchMotorcycles = async () => {
     setLoading(true);
     const { data, error } = await supabase
@@ -46,7 +56,6 @@ const FleetManagement: React.FC = () => {
         year: item.year,
         status: item.status,
         km: item.km,
-        // photoUrl ignored
         purchaseValue: item.purchase_value,
         purchaseKm: item.purchase_km,
         clientId: item.client_id,
@@ -55,6 +64,22 @@ const FleetManagement: React.FC = () => {
       setMotorcycles(mapped);
     }
     setLoading(false);
+  };
+
+  const fetchMaintenance = async (motoId: string) => {
+    setMaintenanceLoading(true);
+    const { data, error } = await supabase
+      .from('motorcycle_maintenance')
+      .select('*')
+      .eq('motorcycle_id', motoId)
+      .order('date', { ascending: false });
+
+    if (!error && data) {
+      setMaintenanceRecords(data);
+    } else {
+      setMaintenanceRecords([]);
+    }
+    setMaintenanceLoading(false);
   };
 
   const fetchClients = async () => {
@@ -86,10 +111,8 @@ const FleetManagement: React.FC = () => {
       year: parseInt(formData.year),
       status: formData.status,
       km: parseInt(formData.km),
-      // photo_url removed
       purchase_value: formData.purchaseValue ? parseFloat(formData.purchaseValue.toString().replace('R$', '').replace('.', '').replace(',', '.')) : 0,
       purchase_km: formData.purchaseKm ? parseInt(formData.purchaseKm) : 0,
-      // Only save client_id/name if status is rented
       client_id: formData.status === 'rented' ? (formData.clientId || null) : null,
       client_name: formData.status === 'rented' ? (clients.find(c => c.id === formData.clientId)?.name || null) : null
     };
@@ -119,6 +142,44 @@ const FleetManagement: React.FC = () => {
     setSubmitting(false);
   };
 
+  const handleAddMaintenance = async () => {
+    if (!formData.id) return; // Should not happen if editing
+    if (!newMaintenance.description || !newMaintenance.value) {
+      alert('Preencha descrição e valor.');
+      return;
+    }
+
+    const val = parseFloat(newMaintenance.value.replace('R$', '').replace('.', '').replace(',', '.'));
+
+    const { error } = await supabase.from('motorcycle_maintenance').insert([{
+      motorcycle_id: formData.id,
+      date: newMaintenance.date,
+      description: newMaintenance.description,
+      value: val,
+      type: newMaintenance.type
+    }]);
+
+    if (!error) {
+      await fetchMaintenance(formData.id);
+      setNewMaintenance({
+        date: new Date().toISOString().split('T')[0],
+        description: '',
+        value: '',
+        type: 'debit'
+      });
+    } else {
+      alert('Erro ao adicionar registro: ' + error.message);
+    }
+  };
+
+  const handleDeleteMaintenance = async (id: string) => {
+    if (!confirm('Excluir este registro?')) return;
+    const { error } = await supabase.from('motorcycle_maintenance').delete().eq('id', id);
+    if (!error) {
+      fetchMaintenance(formData.id);
+    }
+  };
+
   const handleEdit = (moto: Motorcycle) => {
     setFormData({
       id: moto.id,
@@ -133,6 +194,7 @@ const FleetManagement: React.FC = () => {
       purchaseKm: moto.purchaseKm?.toString() || '',
       clientId: moto.clientId || ''
     });
+    fetchMaintenance(moto.id); // Fetch records for this moto
     setIsEditing(true);
     setIsModalOpen(true);
   };
@@ -140,6 +202,7 @@ const FleetManagement: React.FC = () => {
   const handleCloseModal = () => {
     setIsModalOpen(false);
     setIsEditing(false);
+    setMaintenanceRecords([]);
     setFormData({
       id: '',
       code: '',
@@ -288,143 +351,223 @@ const FleetManagement: React.FC = () => {
         onClose={handleCloseModal}
         title={isEditing ? "Editar Motocicleta" : "Cadastrar Nova Motocicleta"}
       >
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-bold text-slate-500 mb-1">Código</label>
-              <input
-                required
-                value={formData.code}
-                onChange={(e) => setFormData({ ...formData, code: e.target.value })}
-                className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-slate-800 focus:ring-2 focus:ring-primary outline-none transition-all"
-                placeholder="Ex: M001"
-              />
+        <div className="space-y-8">
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-500 mb-1">Código</label>
+                <input
+                  required
+                  value={formData.code}
+                  onChange={(e) => setFormData({ ...formData, code: e.target.value })}
+                  className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-slate-800 focus:ring-2 focus:ring-primary outline-none transition-all"
+                  placeholder="Ex: M001"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-500 mb-1">Modelo</label>
+                <input
+                  required
+                  value={formData.model}
+                  onChange={(e) => setFormData({ ...formData, model: e.target.value })}
+                  className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-slate-800 focus:ring-2 focus:ring-primary outline-none transition-all"
+                  placeholder="Ex: Honda CG 160"
+                />
+              </div>
             </div>
-            <div>
-              <label className="block text-xs font-bold text-slate-500 mb-1">Modelo</label>
-              <input
-                required
-                value={formData.model}
-                onChange={(e) => setFormData({ ...formData, model: e.target.value })}
-                className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-slate-800 focus:ring-2 focus:ring-primary outline-none transition-all"
-                placeholder="Ex: Honda CG 160"
-              />
-            </div>
-          </div>
 
-          <div className="grid grid-cols-3 gap-4">
-            <div>
-              <label className="block text-xs font-bold text-slate-500 mb-1">Ano</label>
-              <input
-                required
-                type="number"
-                value={formData.year}
-                onChange={(e) => setFormData({ ...formData, year: e.target.value })}
-                className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-slate-800 focus:ring-2 focus:ring-primary outline-none transition-all"
-                placeholder="2024"
-              />
+            <div className="grid grid-cols-3 gap-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-500 mb-1">Ano</label>
+                <input
+                  required
+                  type="number"
+                  value={formData.year}
+                  onChange={(e) => setFormData({ ...formData, year: e.target.value })}
+                  className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-slate-800 focus:ring-2 focus:ring-primary outline-none transition-all"
+                  placeholder="2024"
+                />
+              </div>
+              <div className="col-span-2">
+                <label className="block text-xs font-bold text-slate-500 mb-1">Placa</label>
+                <input
+                  required
+                  value={formData.plate}
+                  onChange={(e) => setFormData({ ...formData, plate: e.target.value })}
+                  className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-slate-800 focus:ring-2 focus:ring-primary outline-none transition-all uppercase"
+                  placeholder="ABC-1234"
+                />
+              </div>
             </div>
-            <div className="col-span-2">
-              <label className="block text-xs font-bold text-slate-500 mb-1">Placa</label>
-              <input
-                required
-                value={formData.plate}
-                onChange={(e) => setFormData({ ...formData, plate: e.target.value })}
-                className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-slate-800 focus:ring-2 focus:ring-primary outline-none transition-all uppercase"
-                placeholder="ABC-1234"
-              />
-            </div>
-          </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-bold text-slate-500 mb-1">Cor</label>
-              <select
-                required
-                value={formData.color}
-                onChange={(e) => setFormData({ ...formData, color: e.target.value })}
-                className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-slate-800 focus:ring-2 focus:ring-primary outline-none transition-all"
-              >
-                <option value="">Selecione...</option>
-                <option value="Preta">Preta</option>
-                <option value="Vermelha">Vermelha</option>
-                <option value="Azul">Azul</option>
-                <option value="Branca">Branca</option>
-                <option value="Prata">Prata</option>
-              </select>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-500 mb-1">Cor</label>
+                <select
+                  required
+                  value={formData.color}
+                  onChange={(e) => setFormData({ ...formData, color: e.target.value })}
+                  className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-slate-800 focus:ring-2 focus:ring-primary outline-none transition-all"
+                >
+                  <option value="">Selecione...</option>
+                  <option value="Preta">Preta</option>
+                  <option value="Vermelha">Vermelha</option>
+                  <option value="Azul">Azul</option>
+                  <option value="Branca">Branca</option>
+                  <option value="Prata">Prata</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-500 mb-1">Status</label>
+                <select
+                  value={formData.status}
+                  onChange={(e) => setFormData({ ...formData, status: e.target.value as any })}
+                  className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-slate-800 focus:ring-2 focus:ring-primary outline-none transition-all"
+                >
+                  <option value="available">Disponível</option>
+                  <option value="rented">Alugada</option>
+                  <option value="maintenance">Manutenção</option>
+                </select>
+              </div>
             </div>
-            <div>
-              <label className="block text-xs font-bold text-slate-500 mb-1">Status</label>
-              <select
-                value={formData.status}
-                onChange={(e) => setFormData({ ...formData, status: e.target.value as any })}
-                className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-slate-800 focus:ring-2 focus:ring-primary outline-none transition-all"
-              >
-                <option value="available">Disponível</option>
-                <option value="rented">Alugada</option>
-                <option value="maintenance">Manutenção</option>
-              </select>
-            </div>
-          </div>
 
-          {formData.status === 'rented' && (
-            <div>
-              <label className="block text-xs font-bold text-slate-500 mb-1">Cliente Responsável</label>
-              <select
-                required
-                value={formData.clientId}
-                onChange={(e) => setFormData({ ...formData, clientId: e.target.value })}
-                className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-slate-800 focus:ring-2 focus:ring-primary outline-none transition-all"
-              >
-                <option value="">Selecione o Cliente...</option>
-                {clients.map(client => (
-                  <option key={client.id} value={client.id}>{client.name}</option>
-                ))}
-              </select>
+            {formData.status === 'rented' && (
+              <div>
+                <label className="block text-xs font-bold text-slate-500 mb-1">Cliente Responsável</label>
+                <select
+                  required
+                  value={formData.clientId}
+                  onChange={(e) => setFormData({ ...formData, clientId: e.target.value })}
+                  className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-slate-800 focus:ring-2 focus:ring-primary outline-none transition-all"
+                >
+                  <option value="">Selecione o Cliente...</option>
+                  {clients.map(client => (
+                    <option key={client.id} value={client.id}>{client.name}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            <div className="grid grid-cols-3 gap-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-500 mb-1">Valor Compra</label>
+                <input
+                  value={formData.purchaseValue}
+                  onChange={(e) => setFormData({ ...formData, purchaseValue: e.target.value })}
+                  className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-slate-800 focus:ring-2 focus:ring-primary outline-none transition-all"
+                  placeholder="0,00"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-500 mb-1">KM Compra</label>
+                <input
+                  type="number"
+                  value={formData.purchaseKm}
+                  onChange={(e) => setFormData({ ...formData, purchaseKm: e.target.value })}
+                  className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-slate-800 focus:ring-2 focus:ring-primary outline-none transition-all"
+                  placeholder="0"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-500 mb-1">KM Atual</label>
+                <input
+                  required
+                  type="number"
+                  value={formData.km}
+                  onChange={(e) => setFormData({ ...formData, km: e.target.value })}
+                  className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-slate-800 focus:ring-2 focus:ring-primary outline-none transition-all"
+                  placeholder="0"
+                />
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              disabled={submitting}
+              className="w-full py-4 bg-primary text-slate-900 rounded-xl font-black shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all flex justify-center"
+            >
+              {submitting ? <span className="material-symbols-outlined animate-spin">sync</span> : (isEditing ? 'Atualizar Moto' : 'Cadastrar Moto')}
+            </button>
+          </form>
+
+          {isEditing && (
+            <div className="border-t border-slate-100 dark:border-slate-800 pt-6">
+              <h4 className="text-sm font-black text-slate-900 dark:text-white mb-4">Diário de Manutenção / Receitas</h4>
+
+              {/* Form de Adição Rapida */}
+              <div className="bg-slate-50 dark:bg-slate-900/50 p-4 rounded-xl space-y-3 mb-4">
+                <div className="grid grid-cols-12 gap-2">
+                  <div className="col-span-3">
+                    <input
+                      type="date"
+                      value={newMaintenance.date}
+                      onChange={e => setNewMaintenance({ ...newMaintenance, date: e.target.value })}
+                      className="w-full p-2 text-xs rounded-lg border-none"
+                    />
+                  </div>
+                  <div className="col-span-5">
+                    <input
+                      type="text"
+                      placeholder="Descrição (ex: Troca de óleo, Semanal)"
+                      value={newMaintenance.description}
+                      onChange={e => setNewMaintenance({ ...newMaintenance, description: e.target.value })}
+                      className="w-full p-2 text-xs rounded-lg border-none"
+                    />
+                  </div>
+                  <div className="col-span-3">
+                    <input
+                      type="number"
+                      step="0.01"
+                      placeholder="R$ 0,00"
+                      value={newMaintenance.value}
+                      onChange={e => setNewMaintenance({ ...newMaintenance, value: e.target.value })}
+                      className="w-full p-2 text-xs rounded-lg border-none"
+                    />
+                  </div>
+                  <div className="col-span-1 flex justify-center">
+                    <button
+                      onClick={() => setNewMaintenance({
+                        ...newMaintenance,
+                        type: newMaintenance.type === 'credit' ? 'debit' : 'credit'
+                      })}
+                      className={`w-full h-full rounded-lg flex items-center justify-center text-white font-bold transition-colors ${newMaintenance.type === 'credit' ? 'bg-green-500' : 'bg-red-500'}`}
+                    >
+                      <span className="material-symbols-outlined text-sm">{newMaintenance.type === 'credit' ? 'add' : 'remove'}</span>
+                    </button>
+                  </div>
+                </div>
+                <button
+                  onClick={handleAddMaintenance}
+                  className="w-full py-2 bg-slate-800 text-white rounded-lg text-xs font-bold hover:bg-black transition-all"
+                >
+                  Adicionar Registro
+                </button>
+              </div>
+
+              {/* Lista */}
+              <div className="space-y-2 max-h-60 overflow-y-auto custom-scrollbar">
+                {maintenanceLoading ? (
+                  <p className="text-center text-xs text-slate-400">Carregando...</p>
+                ) : maintenanceRecords.length > 0 ? (
+                  maintenanceRecords.map(rec => (
+                    <div key={rec.id} className="flex items-center justify-between p-2 bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-lg text-xs">
+                      <span className="text-slate-400 font-mono">{new Date(rec.date).toLocaleDateString('pt-BR', { timeZone: 'UTC' })}</span>
+                      <span className="flex-1 px-4 font-bold text-slate-700 dark:text-slate-300">{rec.description}</span>
+                      <span className={`font-black ${rec.type === 'debit' ? 'text-red-500' : 'text-green-500'}`}>
+                        {rec.type === 'debit' ? '-' : '+'} R$ {Number(rec.value).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      </span>
+                      <button onClick={() => handleDeleteMaintenance(rec.id)} className="ml-3 text-slate-300 hover:text-red-500">
+                        <span className="material-symbols-outlined text-sm">delete</span>
+                      </button>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-center text-xs text-slate-400 py-4">Nenhum registro encontrado.</p>
+                )}
+              </div>
             </div>
           )}
-
-          <div className="grid grid-cols-3 gap-4">
-            <div>
-              <label className="block text-xs font-bold text-slate-500 mb-1">Valor Compra</label>
-              <input
-                value={formData.purchaseValue}
-                onChange={(e) => setFormData({ ...formData, purchaseValue: e.target.value })}
-                className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-slate-800 focus:ring-2 focus:ring-primary outline-none transition-all"
-                placeholder="0,00"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-bold text-slate-500 mb-1">KM Compra</label>
-              <input
-                type="number"
-                value={formData.purchaseKm}
-                onChange={(e) => setFormData({ ...formData, purchaseKm: e.target.value })}
-                className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-slate-800 focus:ring-2 focus:ring-primary outline-none transition-all"
-                placeholder="0"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-bold text-slate-500 mb-1">KM Atual</label>
-              <input
-                required
-                type="number"
-                value={formData.km}
-                onChange={(e) => setFormData({ ...formData, km: e.target.value })}
-                className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-slate-800 focus:ring-2 focus:ring-primary outline-none transition-all"
-                placeholder="0"
-              />
-            </div>
-          </div>
-
-          <button
-            type="submit"
-            disabled={submitting}
-            className="w-full py-4 bg-primary text-slate-900 rounded-xl font-black shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all mt-4 flex justify-center"
-          >
-            {submitting ? <span className="material-symbols-outlined animate-spin">sync</span> : (isEditing ? 'Atualizar Moto' : 'Cadastrar Moto')}
-          </button>
-        </form>
+        </div>
       </Modal>
     </div>
   );
