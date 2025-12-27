@@ -8,17 +8,15 @@ import PageHeader from './PageHeader';
 const currentMonthIndex = new Date().getMonth();
 const currentMonthName = MONTHS[currentMonthIndex];
 
-const chartData = MONTHS.map((month, i) => ({
+// Initial data generation functions
+const generateChartData = () => MONTHS.map((month, i) => ({
   name: month,
   receita: 4000 + Math.random() * 6000,
   despesa: 3000 + Math.random() * 4000,
-  isCurrent: i === currentMonthIndex
+  isCurrent: i === new Date().getMonth()
 }));
 
-const currentMonthRevenue = chartData[currentMonthIndex].receita;
-const currentMonthExpense = chartData[currentMonthIndex].despesa;
-
-const pieData = [
+const generatePieData = () => [
   { name: 'ANDRE S', value: 11, color: '#3B82F6' },
   { name: 'LOC MOTTUS', value: 16, color: '#F59E0B' },
   { name: 'GERAL', value: 14, color: '#10B981' },
@@ -47,43 +45,95 @@ const StatCard: React.FC<{ title: string, value: string, change?: string, color:
 
 const Dashboard: React.FC = () => {
   const [alerts, setAlerts] = useState({ cnh: 0, fines: 0 });
+  const [chartData, setChartData] = useState(generateChartData());
+  const [pieData, setPieData] = useState(generatePieData());
+  const [isBackingUp, setIsBackingUp] = useState(false);
+
+  const currentMonthIndex = new Date().getMonth();
+  const currentMonthRevenue = chartData[currentMonthIndex].receita;
+  const currentMonthExpense = chartData[currentMonthIndex].despesa;
+
+  const fetchAlerts = async () => {
+    // CNH Alerts
+    const { data: clients } = await supabase.from('clients').select('cnh_expiry, status');
+    let cnhCount = 0;
+    if (clients) {
+      const today = new Date();
+      const thirtyDaysFromNow = new Date();
+      thirtyDaysFromNow.setDate(today.getDate() + 30);
+
+      cnhCount = clients.filter((c: any) => {
+        if (!c.cnh_expiry) return false;
+        const expiry = new Date(c.cnh_expiry);
+        return expiry <= thirtyDaysFromNow;
+      }).length;
+    }
+
+    // Fines Alerts
+    let finesCount = 0;
+    try {
+      const { data: fines, error } = await supabase
+        .from('fines')
+        .select('id')
+        .eq('status', 'pending');
+
+      if (!error && fines) {
+        finesCount = fines.length;
+      }
+    } catch (e) {
+      console.log('Fines table might not exist yet');
+    }
+
+    setAlerts({ cnh: cnhCount, fines: finesCount });
+  };
+
+  const handleBackup = async () => {
+    setIsBackingUp(true);
+    try {
+      // Fetch all major tables
+      const [
+        { data: clients },
+        { data: fleet },
+        { data: fines },
+        { data: cashFlow }
+      ] = await Promise.all([
+        supabase.from('clients').select('*'),
+        supabase.from('motorcycles').select('*'),
+        supabase.from('fines').select('*'),
+        supabase.from('cash_flow').select('*')
+      ]);
+
+      const backupData = {
+        version: '1.0',
+        timestamp: new Date().toISOString(),
+        data: {
+          clients: clients || [],
+          fleet: fleet || [],
+          fines: fines || [],
+          cashFlow: cashFlow || []
+        }
+      };
+
+      const blob = new Blob([JSON.stringify(backupData, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `sistema_3a_backup_${new Date().toISOString().split('T')[0]}.json`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      alert('Backup de recuperação gerado com sucesso! Guarde este arquivo em um local seguro.');
+    } catch (error) {
+      console.error('Backup failed:', error);
+      alert('Falha ao gerar backup. Verifique a conexão com o banco de dados.');
+    } finally {
+      setIsBackingUp(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchAlerts = async () => {
-      // CNH Alerts
-      const { data: clients } = await supabase.from('clients').select('cnh_expiry, status');
-      let cnhCount = 0;
-      if (clients) {
-        const today = new Date();
-        const thirtyDaysFromNow = new Date();
-        thirtyDaysFromNow.setDate(today.getDate() + 30);
-
-        cnhCount = clients.filter((c: any) => {
-          if (!c.cnh_expiry) return false;
-          const expiry = new Date(c.cnh_expiry);
-          // Check if expired or expiring in 30 days
-          return expiry <= thirtyDaysFromNow;
-        }).length;
-      }
-
-      // Fines Alerts
-      let finesCount = 0;
-      try {
-        const { data: fines, error } = await supabase
-          .from('fines')
-          .select('id')
-          .eq('status', 'pending');
-
-        if (!error && fines) {
-          finesCount = fines.length;
-        }
-      } catch (e) {
-        console.log('Fines table might not exist yet');
-      }
-
-      setAlerts({ cnh: cnhCount, fines: finesCount });
-    };
-
     fetchAlerts();
   }, []);
 
@@ -93,8 +143,15 @@ const Dashboard: React.FC = () => {
         title="Dashboard Overview"
         description={<>Análise financeira do mês de <span className="text-primary font-bold">{currentMonthName}</span>.</>}
       >
-        <button className="px-5 py-2.5 bg-white dark:bg-brand-surface border border-slate-200 dark:border-slate-800 rounded-xl text-sm font-bold text-slate-600 dark:text-slate-300 shadow-sm hover:bg-slate-50 transition-all flex items-center gap-2">
-          <span className="material-symbols-outlined text-xl">file_download</span> Exportar
+        <button
+          onClick={handleBackup}
+          disabled={isBackingUp}
+          className={`px-5 py-2.5 bg-brand-surface border border-slate-200 dark:border-slate-800 rounded-xl text-sm font-bold text-slate-600 dark:text-slate-300 shadow-sm hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-all flex items-center gap-2 ${isBackingUp ? 'opacity-50' : ''}`}
+        >
+          <span className={`material-symbols-outlined text-xl ${isBackingUp ? 'animate-spin' : ''}`}>
+            {isBackingUp ? 'sync' : 'cloud_download'}
+          </span>
+          {isBackingUp ? 'Gerando Backup...' : 'Backup de Recuperação'}
         </button>
         <button className="px-5 py-2.5 bg-primary text-slate-900 rounded-xl text-sm font-black shadow-lg shadow-primary/20 hover:scale-105 transition-all">
           Novo Lançamento
