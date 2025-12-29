@@ -34,7 +34,7 @@ const ChargesSchedule: React.FC = () => {
     frequency: 'fixed' as 'fixed' | 'weekly' | 'monthly',
     dayOfWeek: 1, // Default to Monday
     dayOfMonth: 1,
-    isRecurring: false
+    isRecurring: true
   });
   const [submitting, setSubmitting] = useState(false);
 
@@ -97,6 +97,33 @@ const ChargesSchedule: React.FC = () => {
       })
       .eq('id', charge.id);
 
+    if (!error && newStatus === 'received' && charge.isRecurring) {
+      // Automatic recurrence: create next record
+      const calculateNextDate = (dateStr: string, frequency: string) => {
+        const d = new Date(dateStr + 'T12:00:00');
+        if (frequency === 'weekly') d.setDate(d.getDate() + 7);
+        else if (frequency === 'monthly') d.setMonth(d.getMonth() + 1);
+        else d.setDate(d.getDate() + 7); // Default fallback for recurring
+        return d.toISOString().split('T')[0];
+      };
+
+      const nextDate = calculateNextDate(charge.date, charge.frequency || 'weekly');
+
+      await supabase.from('charges').insert([{
+        client_name: charge.clientName,
+        ref: charge.ref,
+        value: charge.value,
+        due_date: nextDate,
+        status: 'pending',
+        frequency: charge.frequency,
+        day_of_week: charge.dayOfWeek,
+        day_of_month: charge.dayOfMonth,
+        is_recurring: true
+      }]);
+
+      fetchCharges(); // Refresh to show the next one if it lands in the same week
+    }
+
     if (error) {
       // Revert if error
       alert('Erro ao atualizar status: ' + error.message);
@@ -133,7 +160,7 @@ const ChargesSchedule: React.FC = () => {
     e.preventDefault();
     setSubmitting(true);
 
-    const val = parseFloat(formData.value.replace('R$', '').replace('.', '').replace(',', '.'));
+    const val = parseFloat(formData.value) || 0;
 
     const { error } = await supabase.from('charges').insert([{
       client_name: formData.clientName,
@@ -160,7 +187,7 @@ const ChargesSchedule: React.FC = () => {
         frequency: 'fixed',
         dayOfWeek: 1,
         dayOfMonth: 1,
-        isRecurring: false
+        isRecurring: true
       });
     } else {
       alert('Erro ao criar cobrança: ' + error.message);

@@ -37,7 +37,7 @@ const BankManagement: React.FC = () => {
         e.preventDefault();
         setSubmitting(true);
 
-        const val = parseFloat(formData.balance.toString().replace(',', '.'));
+        const val = parseFloat(formData.balance) || 0;
 
         if (isEditing) {
             const { error } = await supabase

@@ -68,7 +68,7 @@ const PropertyManagement: React.FC = () => {
     e.preventDefault();
     setSubmitting(true);
 
-    const val = parseFloat(formData.value.replace('R$', '').replace('.', '').replace(',', '.'));
+    const val = parseFloat(formData.value) || 0;
 
     const selectedClient = clients.find(c => c.id === formData.tenantId);
 

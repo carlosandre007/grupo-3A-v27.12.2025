@@ -79,7 +79,7 @@ const CashFlow: React.FC = () => {
     e.preventDefault();
     setSubmitting(true);
 
-    const val = parseFloat(formData.value.replace('R$', '').replace('.', '').replace(',', '.'));
+    const val = parseFloat(formData.value) || 0;
 
     const dbData = {
       description: formData.description,

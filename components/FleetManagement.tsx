@@ -111,7 +111,7 @@ const FleetManagement: React.FC = () => {
       year: parseInt(formData.year),
       status: formData.status,
       km: parseInt(formData.km),
-      purchase_value: formData.purchaseValue ? parseFloat(formData.purchaseValue.toString().replace('R$', '').replace('.', '').replace(',', '.')) : 0,
+      purchase_value: formData.purchaseValue ? parseFloat(formData.purchaseValue) : 0,
       purchase_km: formData.purchaseKm ? parseInt(formData.purchaseKm) : 0,
       client_id: formData.status === 'rented' ? (formData.clientId || null) : null,
       client_name: formData.status === 'rented' ? (clients.find(c => c.id === formData.clientId)?.name || null) : null
@@ -149,7 +149,7 @@ const FleetManagement: React.FC = () => {
       return;
     }
 
-    const val = parseFloat(newMaintenance.value.replace('R$', '').replace('.', '').replace(',', '.'));
+    const val = parseFloat(newMaintenance.value) || 0;
 
     const { error } = await supabase.from('motorcycle_maintenance').insert([{
       motorcycle_id: formData.id,

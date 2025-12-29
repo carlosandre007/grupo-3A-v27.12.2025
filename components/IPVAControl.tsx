@@ -111,7 +111,7 @@ const IPVAControl: React.FC = () => {
     e.preventDefault();
     setSubmitting(true);
 
-    const val = parseFloat(formData.value.toString().replace('R$', '').replace('.', '').replace(',', '.'));
+    const val = parseFloat(formData.value) || 0;
 
     const dbData = {
       vehicle: formData.vehicle,
