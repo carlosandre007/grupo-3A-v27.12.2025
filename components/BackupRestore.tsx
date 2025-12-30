@@ -4,13 +4,13 @@ import PageHeader from './PageHeader';
 
 const TABLES = [
     'banks',
-    'motorcycles',
-    'motorcycle_maintenance',
+    'categories',
     'clients',
     'properties',
-    'charges',
+    'motorcycles',
+    'motorcycle_maintenance',
     'ipva_records',
-    'categories',
+    'charges',
     'transactions'
 ];
 
