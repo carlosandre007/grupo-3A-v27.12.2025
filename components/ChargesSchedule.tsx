@@ -30,8 +30,7 @@ const ChargesSchedule: React.FC = () => {
     ref: '',
     value: '',
     date: new Date().toISOString().split('T')[0],
-    status: 'pending' as 'pending' | 'received',
-    frequency: 'fixed' as 'fixed' | 'weekly' | 'monthly',
+    frequency: 'weekly' as 'weekly' | 'monthly',
     dayOfWeek: 1, // Default to Monday
     dayOfMonth: 1,
     isRecurring: true
@@ -69,7 +68,7 @@ const ChargesSchedule: React.FC = () => {
         frequency: item.frequency || 'weekly',
         dayOfWeek: item.day_of_week,
         dayOfMonth: item.day_of_month,
-        isRecurring: item.is_recurring ?? false
+        isRecurring: true // Enforce global recurrence logic as requested
       }));
       setCharges(mapped);
     }
@@ -183,7 +182,7 @@ const ChargesSchedule: React.FC = () => {
       frequency: formData.frequency,
       day_of_week: formData.frequency === 'weekly' ? formData.dayOfWeek : null,
       day_of_month: formData.frequency === 'monthly' ? formData.dayOfMonth : null,
-      is_recurring: formData.isRecurring
+      is_recurring: true
     }]);
 
     if (!error) {
@@ -389,7 +388,6 @@ const ChargesSchedule: React.FC = () => {
                 onChange={(e) => setFormData({ ...formData, frequency: e.target.value as any })}
                 className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-slate-800 focus:ring-2 focus:ring-primary outline-none transition-all"
               >
-                <option value="fixed">Única</option>
                 <option value="weekly">Semanal</option>
                 <option value="monthly">Mensal</option>
               </select>
@@ -449,18 +447,7 @@ const ChargesSchedule: React.FC = () => {
             />
           </div>
 
-          <div className="flex items-center gap-3 p-4 bg-slate-50 dark:bg-slate-900/50 rounded-2xl border border-slate-100 dark:border-slate-800">
-            <input
-              type="checkbox"
-              id="isRecurring"
-              checked={formData.isRecurring}
-              onChange={(e) => setFormData({ ...formData, isRecurring: e.target.checked })}
-              className="w-5 h-5 rounded text-primary focus:ring-primary border-slate-300 dark:border-slate-700 dark:bg-slate-800"
-            />
-            <label htmlFor="isRecurring" className="text-sm font-bold text-slate-600 dark:text-slate-300 cursor-pointer">
-              Cobrança Recorrente
-            </label>
-          </div>
+          {/* Recurrence Checkbox Removed as per requirement */}
 
           <button
             type="submit"
