@@ -66,10 +66,10 @@ const ChargesSchedule: React.FC = () => {
         time: item.time,
         status: item.status,
         receivedAt: item.received_at,
-        frequency: item.frequency,
+        frequency: item.frequency || 'weekly',
         dayOfWeek: item.day_of_week,
         dayOfMonth: item.day_of_month,
-        isRecurring: item.is_recurring
+        isRecurring: item.is_recurring ?? false
       }));
       setCharges(mapped);
     }
@@ -109,19 +109,29 @@ const ChargesSchedule: React.FC = () => {
 
       const nextDate = calculateNextDate(charge.date, charge.frequency || 'weekly');
 
-      await supabase.from('charges').insert([{
-        client_name: charge.clientName,
-        ref: charge.ref,
-        value: charge.value,
-        due_date: nextDate,
-        status: 'pending',
-        frequency: charge.frequency,
-        day_of_week: charge.dayOfWeek,
-        day_of_month: charge.dayOfMonth,
-        is_recurring: true
-      }]);
+      // PREVENT DUPLICATION: Check if a charge already exists for this client on this date
+      const { data: existing } = await supabase
+        .from('charges')
+        .select('id')
+        .eq('client_name', charge.clientName)
+        .eq('due_date', nextDate)
+        .eq('ref', charge.ref)
+        .maybeSingle();
 
-      fetchCharges(); // Refresh to show the next one if it lands in the same week
+      if (!existing) {
+        await supabase.from('charges').insert([{
+          client_name: charge.clientName,
+          ref: charge.ref,
+          value: charge.value,
+          due_date: nextDate,
+          status: 'pending',
+          frequency: charge.frequency,
+          day_of_week: charge.dayOfWeek,
+          day_of_month: charge.dayOfMonth,
+          is_recurring: true // Ensure it stays recurring
+        }]);
+        fetchCharges();
+      }
     }
 
     if (error) {
@@ -162,9 +172,10 @@ const ChargesSchedule: React.FC = () => {
 
     const val = parseFloat(formData.value) || 0;
 
+    const clientNameClean = formData.clientName.trim();
     const { error } = await supabase.from('charges').insert([{
-      client_name: formData.clientName,
-      ref: formData.ref,
+      client_name: clientNameClean,
+      ref: formData.ref.trim(),
       value: val,
       due_date: formData.date,
       time: null,
@@ -272,9 +283,14 @@ const ChargesSchedule: React.FC = () => {
 
                         <div className="flex items-start justify-between">
                           <div className="flex-1 pr-4">
-                            <p className={`text-xs font-black transition-all ${isDone ? 'text-green-700 dark:text-green-400 line-through opacity-50' : 'text-slate-900 dark:text-white'}`}>
-                              {charge.clientName}
-                            </p>
+                            <div className="flex items-center gap-1.5 mb-0.5">
+                              <p className={`text-xs font-black transition-all ${isDone ? 'text-green-700 dark:text-green-400 line-through opacity-50' : 'text-slate-900 dark:text-white'}`}>
+                                {charge.clientName}
+                              </p>
+                              {charge.isRecurring && (
+                                <span className="material-symbols-outlined text-[10px] text-primary animate-pulse" title="Cobrança Recorrente">sync</span>
+                              )}
+                            </div>
                             <p className="text-[9px] font-bold text-slate-400 uppercase tracking-tight">{charge.ref}</p>
                           </div>
                           <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all ${isDone ? 'bg-success border-success text-white' : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900'
