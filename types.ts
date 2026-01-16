@@ -2,6 +2,8 @@
 export enum NavItem {
   DASHBOARD = 'dashboard',
   CASH_FLOW = 'cash_flow',
+  ALERTS = 'alerts',
+  SHOPPING_CART = 'shopping_cart',
   LOC_MOTTUS = 'loc_mottus',
   IPVA = 'ipva',
   CHARGES = 'charges',
@@ -10,6 +12,7 @@ export enum NavItem {
   BANKS = 'banks',
   BACKUP = 'backup'
 }
+
 
 export interface Bank {
   id: string;
@@ -65,6 +68,7 @@ export interface Property {
   value: number;
   tenant?: string;
   tenantId?: string;
+  dueDay?: number;
   status: 'rented' | 'available';
 }
 
@@ -98,3 +102,26 @@ export interface Category {
   name: string;
   type: 'in' | 'out';
 }
+
+export interface MaintenanceAlert {
+  id: string;
+  type: 'vehicle' | 'property';
+  related_item: string; // Plate or property code
+  description: string;
+  due_date?: string;
+  due_km?: number;
+  status: 'active' | 'resolved';
+  created_at?: string;
+}
+
+export interface ShoppingCartItem {
+  id: string;
+  description: string;
+  category: 'piece' | 'material' | 'service' | 'task';
+  estimated_value: number;
+  origin: 'manual' | 'alert';
+  status: 'pending' | 'bought' | 'completed';
+  alert_id?: string;
+  created_at?: string;
+}
+

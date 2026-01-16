@@ -1,75 +1,98 @@
-
 <!DOCTYPE html>
 <html lang="pt-BR" class="light">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>GRUPO 3A - Dashboard</title>
-    <!-- Google Fonts -->
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Manrope:wght@200..800&display=swap" rel="stylesheet" />
-    <!-- Material Symbols -->
-    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
-    <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com?plugins=forms,typography,aspect-ratio"></script>
-    <script>
-      tailwind.config = {
-        darkMode: "class",
-        theme: {
-          extend: {
-            colors: {
-              primary: {
-                DEFAULT: "#F2C94C",
-                dark: "#D4AF37",
-                light: "#FDF4D4"
-              },
-              brand: {
-                dark: "#111827",
-                surface: "#1f2937",
-                bg: "#0f172a"
-              },
-              success: "#10B981",
-              danger: "#EF4444",
-              info: "#3B82F6",
-              warning: "#F59E0B"
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GRUPO 3A – Sistema de Gestão</title>
+  <!-- PWA -->
+  <link rel="manifest" href="/manifest.json" />
+  <meta name="theme-color" content="#F2C94C" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <link rel="apple-touch-icon" href="/icon-192.png" />
+  <link rel="apple-touch-icon" href="/icon-192.png" />
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Manrope:wght@200..800&display=swap"
+    rel="stylesheet" />
+  <!-- Material Symbols -->
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
+    rel="stylesheet" />
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com?plugins=forms,typography,aspect-ratio"></script>
+  <script>
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            primary: {
+              DEFAULT: "#F2C94C",
+              dark: "#D4AF37",
+              light: "#FDF4D4"
             },
-            fontFamily: {
-              sans: ["Inter", "sans-serif"],
-              display: ["Manrope", "sans-serif"]
-            }
+            brand: {
+              dark: "#111827",
+              surface: "#1f2937",
+              bg: "#0f172a"
+            },
+            success: "#10B981",
+            danger: "#EF4444",
+            info: "#3B82F6",
+            warning: "#F59E0B"
+          },
+          fontFamily: {
+            sans: ["Inter", "sans-serif"],
+            display: ["Manrope", "sans-serif"]
           }
         }
-      };
-    </script>
-    <style>
-      body {
-        -webkit-font-smoothing: antialiased;
-        -moz-osx-font-smoothing: grayscale;
       }
-      .custom-scrollbar::-webkit-scrollbar {
-        width: 6px;
-        height: 6px;
+    };
+  </script>
+  <style>
+    body {
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    .custom-scrollbar::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+
+    .custom-scrollbar::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background: #e2e8f0;
+      border-radius: 10px;
+    }
+
+    .dark .custom-scrollbar::-webkit-scrollbar-thumb {
+      background: #334155;
+    }
+
+    /* Animation for chart loading */
+    @keyframes chartGrow {
+      from {
+        transform: scaleY(0);
+        transform-origin: bottom;
       }
-      .custom-scrollbar::-webkit-scrollbar-track {
-        background: transparent;
+
+      to {
+        transform: scaleY(1);
+        transform-origin: bottom;
       }
-      .custom-scrollbar::-webkit-scrollbar-thumb {
-        background: #e2e8f0;
-        border-radius: 10px;
-      }
-      .dark .custom-scrollbar::-webkit-scrollbar-thumb {
-        background: #334155;
-      }
-      /* Animation for chart loading */
-      @keyframes chartGrow {
-        from { transform: scaleY(0); transform-origin: bottom; }
-        to { transform: scaleY(1); transform-origin: bottom; }
-      }
-      .animate-chart {
-        animation: chartGrow 1s ease-out forwards;
-      }
-    </style>
+    }
+
+    .animate-chart {
+      animation: chartGrow 1s ease-out forwards;
+    }
+  </style>
   <script type="importmap">
 {
   "imports": {
@@ -80,10 +103,12 @@
   }
 }
 </script>
-<link rel="stylesheet" href="/index.css">
+  <link rel="stylesheet" href="/index.css">
 </head>
-  <body class="bg-slate-50 dark:bg-brand-bg transition-colors duration-200">
-    <div id="root"></div>
+
+<body class="bg-slate-50 dark:bg-brand-bg transition-colors duration-200">
+  <div id="root"></div>
   <script type="module" src="/index.tsx"></script>
 </body>
+
 </html>

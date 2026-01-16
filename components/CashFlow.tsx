@@ -192,19 +192,10 @@ const CashFlow: React.FC = () => {
   const filteredCategories = categories.filter(c => c.type === formData.type);
 
   const handleDeleteTransaction = async (transaction: Transaction) => {
-    const transDate = new Date(transaction.date);
-    const now = new Date();
-    const hoursDiff = (now.getTime() - transDate.getTime()) / (1000 * 60 * 60);
-
-    // If it's income (receita) AND more than 24 hours old, ask for password
-    if (transaction.type === 'in' && hoursDiff > 24) {
-      const password = prompt('Esta transação tem mais de 24 horas. Insira a senha para excluir:');
-      if (password !== '4859') {
-        alert('Senha incorreta.');
-        return;
-      }
-    } else {
-      if (!confirm('Tem certeza que deseja excluir este lançamento?')) return;
+    const password = prompt('Para excluir este lançamento, insira a senha de confirmação:');
+    if (password !== '4859') {
+      alert('Senha incorreta. A exclusão não foi realizada.');
+      return;
     }
 
     const { error } = await supabase.from('transactions').delete().eq('id', transaction.id);
@@ -214,6 +205,7 @@ const CashFlow: React.FC = () => {
       alert('Erro ao excluir transação: ' + error.message);
     }
   };
+
 
   return (
     <div className="space-y-6 pb-8">
@@ -272,7 +264,7 @@ const CashFlow: React.FC = () => {
                 <tr className="bg-slate-50/50 dark:bg-slate-900/50">
                   <th className="px-6 py-4 text-[9px] font-black text-slate-400 uppercase tracking-[0.2em]">Data</th>
                   <th className="px-6 py-4 text-[9px] font-black text-slate-400 uppercase tracking-[0.2em]">Categoria</th>
-                  <th className="px-6 py-4 text-[9px] font-black text-slate-400 uppercase tracking-[0.2em]">Descrição</th>
+                  <th className="px-6 py-4 text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] w-1/4">Descrição</th>
                   <th className="px-6 py-4 text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] text-right">Valor</th>
                   <th className="px-6 py-4 text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] text-center">Tipo</th>
                   <th className="px-6 py-4 text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] text-center">Ação</th>
@@ -285,7 +277,7 @@ const CashFlow: React.FC = () => {
                     <td className="px-6 py-4">
                       <span className="text-[10px] font-black uppercase px-2 py-1 bg-slate-100 dark:bg-slate-800 text-slate-500 rounded-lg">{t.category}</span>
                     </td>
-                    <td className="px-6 py-4 text-sm font-black text-slate-900 dark:text-white">{t.description}</td>
+                    <td className="px-6 py-4 text-sm font-black text-slate-900 dark:text-white max-w-[200px] truncate" title={t.description}>{t.description}</td>
                     <td className={`px-6 py-4 text-sm font-black text-right ${t.type === 'in' ? 'text-success' : 'text-danger'}`}>
                       {t.type === 'in' ? '+' : '-'} {Number(t.value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                     </td>

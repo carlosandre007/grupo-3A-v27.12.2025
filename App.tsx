@@ -10,7 +10,10 @@ import ChargesSchedule from './components/ChargesSchedule';
 import ClientManagement from './components/ClientManagement';
 import BankManagement from './components/BankManagement';
 import BackupRestore from './components/BackupRestore';
+import AlertsView from './components/AlertsView';
+import ShoppingCartView from './components/ShoppingCartView';
 import Login from './components/Login';
+
 import { NavItem } from './types';
 import { supabase } from './lib/supabase';
 import { Session } from '@supabase/supabase-js';
@@ -21,6 +24,7 @@ const App: React.FC = () => {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const [ipvaAlerts, setIpvaAlerts] = useState(0);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   useEffect(() => {
     // Initial session check
@@ -34,34 +38,46 @@ const App: React.FC = () => {
       setSession(session);
     });
 
-    // Fetch IPVA Alerts (due within 5 days)
-    const fetchIpvaAlerts = async () => {
+    // Fetch General Alerts (IPVA + Maintenance)
+    const fetchAlerts = async () => {
       const today = new Date();
       const next5Days = new Date();
       next5Days.setDate(today.getDate() + 5);
 
-      const { data } = await supabase
+      // Fetch IPVA
+      const { data: ipvaData } = await supabase
         .from('ipva_records')
         .select('*')
         .eq('status', 'pending');
 
-      if (data) {
-        const count = data.filter((item: any) => {
+      // Fetch Maintenance Alerts
+      const { data: maintData } = await supabase
+        .from('maintenance_alerts')
+        .select('*')
+        .eq('status', 'active');
+
+      let count = 0;
+      if (ipvaData) {
+        count += ipvaData.filter((item: any) => {
           const due = new Date(item.due_date);
-          const diffTime = due.getTime() - today.getTime();
-          const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-          // Show alert if due in <= 5 days and not past (or maybe include past?)
-          // Let's include everything <= 5 days (including overdue)
+          const diffDays = Math.ceil((due.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
           return diffDays <= 5;
         }).length;
-        setIpvaAlerts(count);
       }
+
+      if (maintData) {
+        count += maintData.length;
+      }
+
+      setIpvaAlerts(count);
     };
 
-    fetchIpvaAlerts();
+    fetchAlerts();
+
 
     // Poll every minute for updates (optional, but good for "realtime" feel)
-    const interval = setInterval(fetchIpvaAlerts, 60000);
+    const interval = setInterval(fetchAlerts, 60000);
+
 
     return () => {
       subscription.unsubscribe();
@@ -89,8 +105,13 @@ const App: React.FC = () => {
         return <PropertyManagement />;
       case NavItem.CASH_FLOW:
         return <CashFlow />;
+      case NavItem.ALERTS:
+        return <AlertsView />;
+      case NavItem.SHOPPING_CART:
+        return <ShoppingCartView />;
       case NavItem.CHARGES:
         return <ChargesSchedule />;
+
       case NavItem.CLIENTS:
         return <ClientManagement />;
       case NavItem.BANKS:
@@ -104,8 +125,11 @@ const App: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-brand-bg flex items-center justify-center">
-        <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+      <div className="min-h-screen bg-brand-bg flex flex-col items-center justify-center">
+        <div className="w-72 h-72 relative">
+          <img src="/logo.png" alt="Loading" className="w-full h-full object-contain animate-pulse" />
+          <div className="absolute inset-0 border-[10px] border-primary border-t-transparent rounded-full animate-spin"></div>
+        </div>
       </div>
     );
   }
@@ -118,21 +142,25 @@ const App: React.FC = () => {
     <div className="flex h-screen overflow-hidden font-sans">
       <Sidebar
         activeTab={activeTab}
-        setActiveTab={setActiveTab}
+        setActiveTab={(tab) => { setActiveTab(tab); setIsSidebarOpen(false); }}
         isDarkMode={isDarkMode}
         toggleDarkMode={() => setIsDarkMode(!isDarkMode)}
         ipvaAlerts={ipvaAlerts}
+        isOpen={isSidebarOpen}
+        onClose={() => setIsSidebarOpen(false)}
       />
 
       <main className="flex-1 flex flex-col h-full bg-slate-50 dark:bg-brand-bg overflow-hidden">
         {/* Mobile Header */}
-        <header className="md:hidden flex items-center justify-between p-4 bg-white dark:bg-brand-surface border-b border-slate-200 dark:border-slate-800">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded bg-primary flex items-center justify-center text-slate-900 font-black shadow-sm">G</div>
-            <span className="font-black text-slate-900 dark:text-white">GRUPO 3A</span>
+        <header className="md:hidden flex items-center justify-between p-4 bg-white dark:bg-brand-surface border-b border-slate-200 dark:border-slate-800 z-50">
+          <div className="w-24 h-24 flex items-center justify-center overflow-hidden leading-none">
+            <img src="/logo.png" alt="Logo Grupo 3A" className="w-full h-full object-contain" />
           </div>
-          <button className="p-2 text-slate-500">
-            <span className="material-symbols-outlined">menu</span>
+          <button
+            onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+            className="p-2 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-all"
+          >
+            <span className="material-symbols-outlined">{isSidebarOpen ? 'close' : 'menu'}</span>
           </button>
         </header>
 

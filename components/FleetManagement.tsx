@@ -35,6 +35,7 @@ const FleetManagement: React.FC = () => {
     date: new Date().toISOString().split('T')[0],
     description: '',
     value: '',
+    km_atual: '',
     type: 'debit' as 'credit' | 'debit' // credit = receita, debit = despesa
   });
   const [maintenanceLoading, setMaintenanceLoading] = useState(false);
@@ -143,34 +144,65 @@ const FleetManagement: React.FC = () => {
   };
 
   const handleAddMaintenance = async () => {
-    if (!formData.id) return; // Should not happen if editing
-    if (!newMaintenance.description || !newMaintenance.value) {
-      alert('Preencha descrição e valor.');
+    if (!formData.id) return;
+    if (!newMaintenance.description || !newMaintenance.value || !newMaintenance.km_atual) {
+      alert('Preencha descrição, valor e KM atual.');
       return;
     }
 
     const val = parseFloat(newMaintenance.value) || 0;
+    const kmVal = parseInt(newMaintenance.km_atual) || 0;
 
-    const { error } = await supabase.from('motorcycle_maintenance').insert([{
+    // 1. Inserir manutenção
+    const { error: maintenanceError } = await supabase.from('motorcycle_maintenance').insert([{
       motorcycle_id: formData.id,
       date: newMaintenance.date,
       description: newMaintenance.description,
       value: val,
+      km_atual: kmVal,
       type: newMaintenance.type
     }]);
 
-    if (!error) {
-      await fetchMaintenance(formData.id);
-      setNewMaintenance({
-        date: new Date().toISOString().split('T')[0],
-        description: '',
-        value: '',
-        type: 'debit'
-      });
-    } else {
-      alert('Erro ao adicionar registro: ' + error.message);
+    if (maintenanceError) {
+      alert('Erro ao adicionar registro: ' + maintenanceError.message);
+      return;
     }
+
+    // 2. Atualizar KM da moto se o KM da manutenção for maior
+    if (kmVal > parseInt(formData.km)) {
+      await supabase
+        .from('motorcycles')
+        .update({ km: kmVal })
+        .eq('id', formData.id);
+
+      setFormData(prev => ({ ...prev, km: kmVal.toString() }));
+      fetchMotorcycles();
+    }
+
+    // 3. Gerar lançamento automático no fluxo de caixa
+    const { error: transError } = await supabase.from('transactions').insert([{
+      date: newMaintenance.date,
+      description: `${newMaintenance.type === 'credit' ? 'Receita' : 'Manutenção'}: ${newMaintenance.description} (${formData.plate})`,
+      value: val,
+      type: newMaintenance.type === 'credit' ? 'in' : 'out',
+      category: 'LOC MOTTUS'
+    }]);
+
+    if (transError) {
+      alert('Erro ao gerar lançamento no fluxo de caixa: ' + transError.message);
+    }
+
+    await fetchMaintenance(formData.id);
+    alert('Registro adicionado com sucesso!');
+    setNewMaintenance({
+      date: new Date().toISOString().split('T')[0],
+      description: '',
+      value: '',
+      km_atual: '',
+      type: 'debit'
+    });
   };
+
 
   const handleDeleteMaintenance = async (id: string) => {
     if (!confirm('Excluir este registro?')) return;
@@ -505,26 +537,35 @@ const FleetManagement: React.FC = () => {
                       className="w-full p-2 text-xs rounded-lg border-none"
                     />
                   </div>
-                  <div className="col-span-5">
+                  <div className="col-span-4">
                     <input
                       type="text"
-                      placeholder="Descrição (ex: Troca de óleo, Semanal)"
+                      placeholder="Descrição"
                       value={newMaintenance.description}
                       onChange={e => setNewMaintenance({ ...newMaintenance, description: e.target.value })}
                       className="w-full p-2 text-xs rounded-lg border-none"
                     />
                   </div>
-                  <div className="col-span-3">
+                  <div className="col-span-2">
                     <input
                       type="number"
-                      step="0.01"
                       placeholder="R$ 0,00"
                       value={newMaintenance.value}
                       onChange={e => setNewMaintenance({ ...newMaintenance, value: e.target.value })}
                       className="w-full p-2 text-xs rounded-lg border-none"
                     />
                   </div>
+                  <div className="col-span-2">
+                    <input
+                      type="number"
+                      placeholder="KM Atual"
+                      value={newMaintenance.km_atual}
+                      onChange={e => setNewMaintenance({ ...newMaintenance, km_atual: e.target.value })}
+                      className="w-full p-2 text-xs rounded-lg border-none"
+                    />
+                  </div>
                   <div className="col-span-1 flex justify-center">
+
                     <button
                       onClick={() => setNewMaintenance({
                         ...newMaintenance,
