@@ -38,17 +38,22 @@ const CashFlow: React.FC = () => {
 
   const [submitting, setSubmitting] = useState(false);
 
+  const [selectedCategoryFilter, setSelectedCategoryFilter] = useState('all');
+
   // Financial Summaries (Filtered)
   const filteredTransactions = useMemo(() => {
     return transactions.filter(t => {
-      const transDate = new Date(t.date);
       // Using getUTCFullYear and getUTCMonth to avoid timezone shift issues with date strings like '2026-02-20'
       const dateParts = t.date.split('-');
       const y = parseInt(dateParts[0]);
       const m = parseInt(dateParts[1]) - 1;
-      return y === selectedYear && m === selectedMonth;
+      
+      const isDateMatch = y === selectedYear && m === selectedMonth;
+      const isCategoryMatch = selectedCategoryFilter === 'all' || t.category === selectedCategoryFilter;
+      
+      return isDateMatch && isCategoryMatch;
     });
-  }, [transactions, selectedMonth, selectedYear]);
+  }, [transactions, selectedMonth, selectedYear, selectedCategoryFilter]);
 
   const income = filteredTransactions.reduce((acc, t) => t.type === 'in' ? acc + Number(t.value) : acc, 0);
   const expense = filteredTransactions.reduce((acc, t) => t.type === 'out' ? acc + Number(t.value) : acc, 0);
@@ -305,7 +310,24 @@ const CashFlow: React.FC = () => {
                 <tr className="bg-slate-50/50 dark:bg-slate-900/50">
                   <th className="px-6 py-4 text-[9px] font-black text-slate-400 uppercase tracking-[0.2em]">Data</th>
                   <th className="px-6 py-4 text-[9px] font-black text-slate-400 uppercase tracking-[0.2em]">Conta</th>
-                  <th className="px-6 py-4 text-[9px] font-black text-slate-400 uppercase tracking-[0.2em]">Categoria</th>
+                  <th className="px-6 py-4">
+                    <div className="flex items-center min-w-[130px]">
+                      <select
+                        value={selectedCategoryFilter}
+                        onChange={(e) => setSelectedCategoryFilter(e.target.value)}
+                        className="bg-transparent outline-none cursor-pointer text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] w-full appearance-none hover:text-slate-600 dark:hover:text-slate-200 transition-colors"
+                        title="Filtrar por Categoria"
+                        style={{ background: 'none' }}
+                      >
+                        <option value="all">CATEGORIA ▼</option>
+                        {Array.from(new Set(categories.map(c => c.name))).sort().map((catName, idx) => (
+                          <option key={idx} value={catName} className="text-slate-900 dark:text-slate-100">
+                            {catName}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </th>
                   <th className="px-6 py-4 text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] w-1/4">Descrição</th>
                   <th className="px-6 py-4 text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] text-right">Valor</th>
                   <th className="px-6 py-4 text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] text-center">Tipo</th>

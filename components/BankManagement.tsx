@@ -18,6 +18,7 @@ const BANK_CONFIGS: Record<string, { color: string, icon: string }> = {
 
 const BankManagement: React.FC = () => {
   const [banks, setBanks] = useState<Bank[]>([]);
+  const [investments, setInvestments] = useState<Bank[]>([]);
   const [loading, setLoading] = useState(true);
   const [isAdding, setIsAdding] = useState(false);
   const [newBank, setNewBank] = useState({ name: '', balance: '' });
@@ -30,13 +31,41 @@ const BankManagement: React.FC = () => {
       .order('name', { ascending: true });
 
     if (!error && data) {
-      setBanks(data.map((b: any) => ({
+      const allBanks = data.map((b: any) => ({
         id: b.id,
         name: b.name,
         balance: b.balance || 0,
         secondary_balance: b.secondary_balance || 0,
         tipo_conta: b.tipo_conta || 'Outro'
-      })));
+      }));
+      
+      setBanks(allBanks.filter(b => b.tipo_conta !== 'Investimento'));
+      
+      const invs = allBanks.filter(b => b.tipo_conta === 'Investimento');
+      setInvestments(invs);
+      
+      if (invs.length < 4) {
+        const missingCount = 4 - invs.length;
+        const { error: insertError } = await supabase.from('banks').insert(
+          Array(missingCount).fill({
+            name: '',
+            balance: 0,
+            tipo_conta: 'Investimento'
+          })
+        );
+        if (!insertError) {
+          const { data: newData } = await supabase.from('banks').select('*').eq('tipo_conta', 'Investimento');
+          if (newData) {
+            setInvestments(newData.map(b => ({
+              id: b.id,
+              name: b.name,
+              balance: b.balance || 0,
+              secondary_balance: b.secondary_balance || 0,
+              tipo_conta: b.tipo_conta
+            })));
+          }
+        }
+      }
     } else if (error) {
       console.error('Erro ao buscar bancos:', error);
     }
@@ -59,6 +88,7 @@ const BankManagement: React.FC = () => {
     if (error) {
       alert('Erro ao atualizar saldo: ' + error.message);
     } else {
+      fetchBanks();
     }
   };
 
@@ -116,14 +146,27 @@ const BankManagement: React.FC = () => {
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <motion.div 
           whileHover={{ scale: 1.02 }}
-          className="bg-slate-900 rounded-3xl p-5 shadow-2xl border border-slate-800 relative overflow-hidden group col-span-1 md:col-span-2"
+          className="bg-slate-900 rounded-3xl p-5 shadow-2xl border border-slate-800 relative overflow-hidden group"
         >
           <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:scale-110 transition-transform">
             <span className="material-symbols-outlined text-7xl text-white">account_balance_wallet</span>
           </div>
-          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-2">Saldo Total Aplicado</p>
-          <h2 className="text-4xl font-black text-primary tracking-tighter">
+          <p className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400 mb-2 truncate">Saldo Total Aplicado</p>
+          <h2 className="text-2xl lg:text-3xl font-black text-primary tracking-tighter">
             R$ {totalBalance.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+          </h2>
+        </motion.div>
+
+        <motion.div 
+          whileHover={{ scale: 1.02 }}
+          className="bg-emerald-900/90 rounded-3xl p-5 shadow-2xl border border-emerald-800 relative overflow-hidden group"
+        >
+          <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:scale-110 transition-transform">
+            <span className="material-symbols-outlined text-7xl text-emerald-400">savings</span>
+          </div>
+          <p className="text-[9px] font-black uppercase tracking-[0.2em] text-emerald-400 mb-2 truncate">Total Investido</p>
+          <h2 className="text-2xl lg:text-3xl font-black text-emerald-300 tracking-tighter">
+            R$ {(investments.reduce((acc, i) => acc + (i.balance || 0), 0)).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
           </h2>
         </motion.div>
 
@@ -310,6 +353,56 @@ const BankManagement: React.FC = () => {
           })}
         </AnimatePresence>
       </div>
+
+      {/* RECURSO INVESTIDO */}
+      <div className="flex items-center gap-4 mb-4 mt-8">
+        <h2 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tighter">Recurso Investido</h2>
+        <div className="px-4 py-1.5 rounded-full bg-emerald-100 dark:bg-emerald-900/30 text-xs font-black text-emerald-600 uppercase tracking-widest shadow-sm border border-emerald-200 dark:border-emerald-800">
+          Total: {(investments.reduce((acc, i) => acc + (i.balance || 0), 0)).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+        </div>
+        <div className="flex-1 h-px bg-slate-200 dark:bg-slate-800"></div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        {investments.slice(0, 4).map((inv, index) => (
+          <motion.div 
+            key={`inv-${inv.id}`}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: index * 0.1 }}
+            className="bg-emerald-50/50 dark:bg-brand-surface border border-emerald-100 dark:border-emerald-800/30 rounded-3xl p-4 flex flex-col gap-3 shadow-sm hover:shadow-md transition-all group"
+          >
+            <div className="flex items-center gap-2 border-b border-emerald-200 dark:border-emerald-800/50 pb-2">
+              <div className="w-6 h-6 rounded-lg bg-emerald-100 dark:bg-emerald-900/50 flex items-center justify-center text-emerald-600 dark:text-emerald-400 shrink-0">
+                <span className="material-symbols-outlined text-[14px]">savings</span>
+              </div>
+              <input
+                type="text"
+                placeholder="Nome do Banco"
+                defaultValue={inv.name}
+                onBlur={async (e) => {
+                  if (e.target.value !== inv.name) {
+                    await supabase.from('banks').update({ name: e.target.value }).eq('id', inv.id);
+                  }
+                }}
+                className="bg-transparent border-none w-full outline-none text-[11px] font-black text-slate-900 dark:text-white uppercase placeholder:text-slate-400 transition-all font-mono tracking-widest"
+              />
+            </div>
+            
+            <div className="relative group/input mt-1">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[11px] font-black text-emerald-600 dark:text-emerald-500">R$</span>
+              <input
+                type="number"
+                placeholder="0,00"
+                defaultValue={inv.balance || 0}
+                onBlur={(e) => handleUpdateBalance(inv.id, parseFloat(e.target.value) || 0, false, 'balance')}
+                className="bg-white dark:bg-slate-900/50 border border-emerald-100 dark:border-emerald-800/50 focus:border-emerald-400 focus:ring-2 focus:ring-emerald-400/20 w-full pl-8 pr-3 py-2.5 rounded-xl text-sm font-black text-slate-900 dark:text-white outline-none transition-all placeholder:text-slate-300"
+              />
+            </div>
+          </motion.div>
+        ))}
+      </div>
+
     </motion.div>
   );
 };

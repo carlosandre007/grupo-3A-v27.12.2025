@@ -143,8 +143,10 @@ const Dashboard: React.FC<{ onNavigate: (target: { tab: NavItem, clientId?: stri
     const inadimplenciaRate = totalPrevisto > 0 ? (overdueCharges.reduce((acc, c) => acc + (c.valor_cobranca || 0), 0) / totalPrevisto) * 100 : 0;
 
     // Total em Caixa (Consolidated)
-    // Agora reflete exatamente o saldo manual inserido no BankManagement.
-    const consolidatedBalance = banks.reduce((total, bank) => total + Number(bank.balance), 0);
+    // Agora reflete exatamente o saldo manual inserido no BankManagement (excluindo investimentos).
+    const consolidatedBalance = banks.filter(b => b.tipo_conta !== 'Investimento').reduce((total, bank) => total + Number(bank.balance || 0), 0);
+
+    const totalInvestido = banks.filter(b => b.tipo_conta === 'Investimento').reduce((total, bank) => total + Number(bank.balance || 0), 0);
 
     // Chart Data: Performance Over Time
     const performanceData = MONTHS.map((month, i) => {
@@ -201,6 +203,7 @@ const Dashboard: React.FC<{ onNavigate: (target: { tab: NavItem, clientId?: stri
       contasAPagar,
       inadimplenciaRate,
       consolidatedBalance,
+      totalInvestido,
       performanceData,
       pieRevenue,
       pieExpense,
@@ -478,6 +481,12 @@ const Dashboard: React.FC<{ onNavigate: (target: { tab: NavItem, clientId?: stri
           highlight={true}
         />
         <StatCard
+          title="Total Investido"
+          value={financialData.totalInvestido.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+          color="#10B981"
+          icon="savings"
+        />
+        <StatCard
           title="Receita no Período"
           value={financialData.current.income.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
           color="#10B981"
@@ -490,12 +499,6 @@ const Dashboard: React.FC<{ onNavigate: (target: { tab: NavItem, clientId?: stri
           color="#EF4444"
           icon="shopping_cart_checkout"
           variation={financialData.variations.expense}
-        />
-        <StatCard
-          title="Contas a Receber"
-          value={financialData.contasAReceber.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
-          color="#F59E0B"
-          icon="request_quote"
         />
       </div>
 
