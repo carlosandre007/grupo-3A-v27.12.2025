@@ -234,16 +234,16 @@ const CashFlow: React.FC = () => {
 
 
   return (
-    <div className="space-y-6 pb-8">
+    <div className="space-y-4 md:space-y-6 pb-8">
       <PageHeader
         title="Fluxo de Caixa"
         description="Controle detalhado de entradas e saídas financeiras."
       >
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2 md:grid-cols-2 lg:flex lg:flex-nowrap">
           <select
             value={selectedMonth}
             onChange={(e) => setSelectedMonth(Number(e.target.value))}
-            className="px-3 py-2 bg-white dark:bg-brand-surface border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-300 outline-none"
+            className="flex-1 md:flex-none px-3 py-2 bg-white dark:bg-brand-surface border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-300 outline-none"
           >
             {MONTHS.map((m, i) => (
               <option key={m} value={i}>{m}</option>
@@ -252,7 +252,7 @@ const CashFlow: React.FC = () => {
           <select
             value={selectedYear}
             onChange={(e) => setSelectedYear(Number(e.target.value))}
-            className="px-3 py-2 bg-white dark:bg-brand-surface border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-300 outline-none"
+            className="flex-1 md:flex-none px-3 py-2 bg-white dark:bg-brand-surface border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-300 outline-none"
           >
             {[2024, 2025, 2026].map(y => (
               <option key={y} value={y}>{y}</option>
@@ -260,43 +260,43 @@ const CashFlow: React.FC = () => {
           </select>
           <button
             onClick={() => setIsCategoryModalOpen(true)}
-            className="px-6 py-2.5 bg-white dark:bg-brand-surface border border-slate-200 dark:border-slate-800 rounded-2xl text-sm font-bold text-slate-600 dark:text-slate-300 shadow-sm hover:bg-slate-50 transition-all flex items-center gap-2"
+            className="flex-1 md:flex-none px-4 py-2 bg-white dark:bg-brand-surface border border-slate-200 dark:border-slate-800 rounded-2xl text-xs font-bold text-slate-600 dark:text-slate-300 shadow-sm hover:bg-slate-50 transition-all flex items-center justify-center gap-2"
           >
-            <span className="material-symbols-outlined text-xl">category</span> Categorias
+            <span className="material-symbols-outlined text-lg">category</span> Categorias
           </button>
           <button
             onClick={() => setIsModalOpen(true)}
-            className="px-6 py-2.5 bg-primary text-slate-900 rounded-2xl text-sm font-black shadow-xl shadow-primary/20 hover:scale-105 transition-all flex items-center gap-2"
+            className="w-full md:w-auto px-6 py-2.5 bg-primary text-slate-900 rounded-2xl text-sm font-black shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-2"
           >
-            <span className="material-symbols-outlined text-xl">add</span> Novo Lançamento
+            <span className="material-symbols-outlined text-xl">add</span> Novo
           </button>
         </div>
       </PageHeader>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-white dark:bg-brand-surface p-6 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-800">
-          <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Entradas (Total)</p>
-          <p className="text-3xl font-black text-success">
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-6">
+        <div className="bg-white dark:bg-brand-surface p-4 md:p-6 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-800">
+          <p className="text-[9px] md:text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Entradas</p>
+          <p className="text-lg md:text-3xl font-black text-success">
             {income.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
           </p>
         </div>
-        <div className="bg-white dark:bg-brand-surface p-6 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-800">
-          <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Saídas (Total)</p>
-          <p className="text-3xl font-black text-danger">
+        <div className="bg-white dark:bg-brand-surface p-4 md:p-6 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-800">
+          <p className="text-[9px] md:text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Saídas</p>
+          <p className="text-lg md:text-3xl font-black text-danger">
             {expense.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
           </p>
         </div>
-        <div className="bg-white dark:bg-brand-surface p-6 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-800 bg-primary/5">
-          <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Saldo Geral</p>
-          <p className={`text-3xl font-black ${balance >= 0 ? 'text-slate-900 dark:text-white' : 'text-danger'}`}>
+        <div className="col-span-2 md:col-span-1 bg-white dark:bg-brand-surface p-4 md:p-6 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-800 bg-primary/5">
+          <p className="text-[9px] md:text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Saldo Geral</p>
+          <p className={`text-lg md:text-3xl font-black ${balance >= 0 ? 'text-slate-900 dark:text-white' : 'text-danger'}`}>
             {balance.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
           </p>
         </div>
       </div>
 
       <div className="bg-white dark:bg-brand-surface rounded-3xl shadow-sm border border-slate-100 dark:border-slate-800 overflow-hidden">
-        <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center">
-          <h3 className="text-lg font-black text-slate-900 dark:text-white">Lançamentos Recentes</h3>
+        <div className="p-4 md:p-6 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center">
+          <h3 className="text-base md:text-lg font-black text-slate-900 dark:text-white uppercase tracking-tight">Lançamentos</h3>
         </div>
 
         {loading ? (
@@ -304,8 +304,8 @@ const CashFlow: React.FC = () => {
             <span className="material-symbols-outlined animate-spin text-3xl">sync</span>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left">
+          <div className="table-responsive">
+            <table className="w-full text-left min-w-[600px] md:min-w-full">
               <thead>
                 <tr className="bg-slate-50/50 dark:bg-slate-900/50">
                   <th className="px-6 py-4 text-[9px] font-black text-slate-400 uppercase tracking-[0.2em]">Data</th>

@@ -19,20 +19,20 @@ const StatCard: React.FC<{
   variation?: number,
   highlight?: boolean 
 }> = ({ title, value, color, icon, variation, highlight }) => (
-  <div className={`bg-white dark:bg-brand-surface p-6 rounded-2xl shadow-sm border-l-4 relative overflow-hidden group hover:shadow-xl hover:-translate-y-1 transition-all duration-300 ${highlight ? 'ring-2 ring-primary ring-offset-2 dark:ring-offset-brand-bg' : ''}`} style={{ borderLeftColor: color }}>
+  <div className={`bg-white dark:bg-brand-surface p-4 md:p-6 rounded-2xl shadow-sm border-l-4 relative overflow-hidden group hover:shadow-xl hover:-translate-y-1 transition-all duration-300 ${highlight ? 'ring-2 ring-primary ring-offset-2 dark:ring-offset-brand-bg' : ''}`} style={{ borderLeftColor: color }}>
     <div className="absolute -right-4 -top-4 opacity-5 group-hover:opacity-10 transition-opacity">
-      <span className="material-symbols-outlined text-9xl">{icon}</span>
+      <span className="material-symbols-outlined text-7xl md:text-9xl">{icon}</span>
     </div>
     <div className="flex items-center gap-2 mb-2">
-      <span className="material-symbols-outlined text-lg" style={{ color }}>{icon}</span>
-      <p className="text-[10px] text-slate-400 dark:text-slate-500 font-black uppercase tracking-widest">{title}</p>
+      <span className="material-symbols-outlined text-base md:text-lg" style={{ color }}>{icon}</span>
+      <p className="text-[9px] md:text-[10px] text-slate-400 dark:text-slate-500 font-black uppercase tracking-widest truncate">{title}</p>
     </div>
     <div className="flex flex-col">
-      <h3 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">{value}</h3>
+      <h3 className="text-lg md:text-2xl font-black text-slate-900 dark:text-white tracking-tight truncate">{value}</h3>
       {variation !== undefined && (
-        <div className={`flex items-center gap-1 mt-1 text-[10px] font-bold ${variation >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
-          <span className="material-symbols-outlined text-sm">{variation >= 0 ? 'trending_up' : 'trending_down'}</span>
-          {variation >= 0 ? '+' : ''}{variation}% vs mês anterior
+        <div className={`flex items-center gap-1 mt-1 text-[9px] md:text-[10px] font-bold ${variation >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
+          <span className="material-symbols-outlined text-xs md:text-sm">{variation >= 0 ? 'trending_up' : 'trending_down'}</span>
+          {variation >= 0 ? '+' : ''}{variation}% <span className="hidden xs:inline">vs mês anterior</span>
         </div>
       )}
     </div>
@@ -472,7 +472,7 @@ const Dashboard: React.FC<{ onNavigate: (target: { tab: NavItem, clientId?: stri
       </div>
 
       {/* Stats Cards Row */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6">
         <StatCard
           title="Total em Caixa"
           value={financialData.consolidatedBalance.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
@@ -487,14 +487,14 @@ const Dashboard: React.FC<{ onNavigate: (target: { tab: NavItem, clientId?: stri
           icon="savings"
         />
         <StatCard
-          title="Receita no Período"
+          title="Receita"
           value={financialData.current.income.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
           color="#10B981"
           icon="payments"
           variation={financialData.variations.income}
         />
         <StatCard
-          title="Despesa no Período"
+          title="Despesa"
           value={financialData.current.expense.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
           color="#EF4444"
           icon="shopping_cart_checkout"

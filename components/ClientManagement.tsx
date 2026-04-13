@@ -403,7 +403,7 @@ const ClientManagement: React.FC<ClientManagementProps> = ({ initialSelectedClie
                 <div className="flex items-start justify-between gap-3 mb-3">
                   <div className="flex flex-wrap items-center gap-2 flex-1">
                     <div className="h-10 w-10 shrink-0 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center overflow-hidden border-2 border-white dark:border-slate-700 shadow-sm">
-                      <img src={`https://picsum.photos/80/80?random=${client.id}`} alt={client.name} className="w-full h-full object-cover" />
+                      <img src={`https://picsum.photos/80/80?random=${client.id}`} alt={client.name} className="w-full h-full object-cover" loading="lazy" />
                     </div>
 
                     {/* Ativos Vinculados ao lado da foto */}
@@ -528,7 +528,7 @@ const ClientManagement: React.FC<ClientManagementProps> = ({ initialSelectedClie
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-bold text-slate-500 mb-1">CPF</label>
               <input
@@ -551,7 +551,7 @@ const ClientManagement: React.FC<ClientManagementProps> = ({ initialSelectedClie
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-bold text-slate-500 mb-1">Cidade</label>
               <input
@@ -575,7 +575,7 @@ const ClientManagement: React.FC<ClientManagementProps> = ({ initialSelectedClie
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <div className="flex items-center justify-between mb-1">
                 <label className="block text-xs font-bold text-slate-500">Número da CNH</label>

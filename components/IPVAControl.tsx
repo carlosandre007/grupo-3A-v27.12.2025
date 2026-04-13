@@ -228,55 +228,54 @@ const IPVAControl: React.FC = () => {
         </PageHeader>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-white dark:bg-brand-surface p-6 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-800 flex flex-col gap-2">
-          <div className="flex items-center gap-2 text-slate-400 font-black text-[10px] uppercase tracking-widest">
-            <span className="material-symbols-outlined text-lg">account_balance_wallet</span> Total a Pagar
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-6">
+        <div className="bg-white dark:bg-brand-surface p-4 md:p-6 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-800 flex flex-col gap-1 md:gap-2">
+          <div className="flex items-center gap-2 text-slate-400 font-black text-[8px] md:text-[10px] uppercase tracking-widest">
+            <span className="material-symbols-outlined text-base md:text-lg">account_balance_wallet</span> Total a Pagar
           </div>
-          <p className="text-3xl font-black text-slate-900 dark:text-white">{totalToPay.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p>
+          <p className="text-lg md:text-3xl font-black text-slate-900 dark:text-white truncate">{totalToPay.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p>
         </div>
-        <div className="bg-white dark:bg-brand-surface p-6 rounded-3xl shadow-sm border-l-4 border-l-primary border border-slate-100 dark:border-slate-800 flex flex-col gap-2">
+        <div className="bg-white dark:bg-brand-surface p-4 md:p-6 rounded-3xl shadow-sm border-l-4 border-l-primary border border-slate-100 dark:border-slate-800 flex flex-col gap-1 md:gap-2">
           <div className="flex justify-between items-center">
-            <div className="flex items-center gap-2 text-slate-400 font-black text-[10px] uppercase tracking-widest">
-              <span className="material-symbols-outlined text-lg text-primary fill">notification_important</span> Vencendo em 30 Dias
+            <div className="flex items-center gap-2 text-slate-400 font-black text-[8px] md:text-[10px] uppercase tracking-widest">
+              <span className="material-symbols-outlined text-base md:text-lg text-primary fill">notification_important</span> Vencendo
             </div>
-            <span className="bg-primary/20 text-primary-dark text-[10px] font-black px-2 py-0.5 rounded-full">Automático</span>
           </div>
-          <p className="text-3xl font-black text-slate-900 dark:text-white">{dueSoonCount}</p>
+          <p className="text-lg md:text-3xl font-black text-slate-900 dark:text-white">{dueSoonCount}</p>
         </div>
-        <div className="bg-white dark:bg-brand-surface p-6 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-800 flex flex-col gap-2">
-          <div className="flex items-center gap-2 text-slate-400 font-black text-[10px] uppercase tracking-widest">
-            <span className="material-symbols-outlined text-lg">check_circle</span> Total Pago
+        <div className="col-span-2 md:col-span-1 bg-white dark:bg-brand-surface p-4 md:p-6 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-800 flex flex-col gap-1 md:gap-2">
+          <div className="flex items-center gap-2 text-slate-400 font-black text-[8px] md:text-[10px] uppercase tracking-widest">
+            <span className="material-symbols-outlined text-base md:text-lg">check_circle</span> Total Pago
           </div>
-          <p className="text-3xl font-black text-slate-900 dark:text-white">{totalPaid.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p>
+          <p className="text-lg md:text-3xl font-black text-slate-900 dark:text-white truncate">{totalPaid.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p>
         </div>
       </div>
 
-      <div className="bg-white dark:bg-brand-surface p-6 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-800 flex flex-col md:flex-row items-end gap-4">
-        <div className="flex-1 space-y-2">
+      <div className="bg-white dark:bg-brand-surface p-4 md:p-6 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-800 flex flex-col md:flex-row items-end gap-4">
+        <div className="w-full md:flex-1 space-y-2">
           <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Buscar Veículo</label>
           <div className="relative">
             <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">search</span>
             <input
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Código, Placa ou Modelo..."
-              className="w-full pl-12 pr-4 py-3 bg-slate-50 dark:bg-slate-900/50 border-none rounded-2xl text-sm focus:ring-2 focus:ring-primary transition-all dark:text-white"
+              placeholder="Placa ou Modelo..."
+              className="w-full pl-12 pr-4 py-3 bg-slate-50 dark:bg-slate-900/50 border-none rounded-2xl text-sm focus:ring-2 focus:ring-primary transition-all dark:text-white outline-none"
             />
           </div>
         </div>
         <div className="w-full md:w-64 space-y-2">
-          <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Mês de Vencimento</label>
+          <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Mês</label>
           <input
             type="month"
             value={selectedMonth}
             onChange={(e) => setSelectedMonth(e.target.value)}
-            className="w-full py-3 px-4 bg-slate-50 dark:bg-slate-900/50 border-none rounded-2xl text-sm focus:ring-2 focus:ring-primary transition-all dark:text-white"
+            className="w-full py-3 px-4 bg-slate-50 dark:bg-slate-900/50 border-none rounded-2xl text-sm focus:ring-2 focus:ring-primary transition-all dark:text-white outline-none"
           />
         </div>
         <button
           onClick={() => { setSearchTerm(''); setSelectedMonth(''); }}
-          className="w-full md:w-auto px-10 py-3 bg-slate-900 dark:bg-slate-800 text-white dark:text-primary font-black text-sm rounded-2xl hover:bg-black transition-all"
+          className="w-full md:w-auto px-10 py-3 bg-slate-900 dark:bg-slate-800 text-white dark:text-primary font-black text-sm rounded-2xl hover:bg-black transition-all active:scale-95"
         >
           Limpar Filtros
         </button>
@@ -288,18 +287,19 @@ const IPVAControl: React.FC = () => {
             <span className="material-symbols-outlined animate-spin text-3xl">sync</span>
           </div>
         ) : (
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="bg-slate-50/50 dark:bg-slate-900/50 border-b border-slate-100 dark:border-slate-800">
-                <th className="p-5 w-12"><input type="checkbox" className="rounded-md border-slate-300 text-primary focus:ring-primary h-5 w-5" /></th>
-                <th className="p-5 text-[9px] font-black uppercase tracking-[0.2em] text-slate-400">Veículo</th>
-                <th className="p-5 text-[9px] font-black uppercase tracking-[0.2em] text-slate-400">Placa / ID</th>
-                <th className="p-5 text-[9px] font-black uppercase tracking-[0.2em] text-slate-400">Valor</th>
-                <th className="p-5 text-[9px] font-black uppercase tracking-[0.2em] text-slate-400">Vencimento</th>
-                <th className="p-5 text-[9px] font-black uppercase tracking-[0.2em] text-slate-400 text-center">Status</th>
-                <th className="p-5"></th>
-              </tr>
-            </thead>
+          <div className="table-responsive">
+            <table className="w-full text-left border-collapse min-w-[800px] md:min-w-full">
+              <thead>
+                <tr className="bg-slate-50/50 dark:bg-slate-900/50 border-b border-slate-100 dark:border-slate-800">
+                  <th className="p-5 w-12"><input type="checkbox" className="rounded-md border-slate-300 text-primary focus:ring-primary h-5 w-5" /></th>
+                  <th className="p-5 text-[9px] font-black uppercase tracking-[0.2em] text-slate-400">Veículo</th>
+                  <th className="p-5 text-[9px] font-black uppercase tracking-[0.2em] text-slate-400">Placa / ID</th>
+                  <th className="p-5 text-[9px] font-black uppercase tracking-[0.2em] text-slate-400">Valor</th>
+                  <th className="p-5 text-[9px] font-black uppercase tracking-[0.2em] text-slate-400">Vencimento</th>
+                  <th className="p-5 text-[9px] font-black uppercase tracking-[0.2em] text-slate-400 text-center">Status</th>
+                  <th className="p-5"></th>
+                </tr>
+              </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
               {filtered.map((row) => (
                 <tr key={row.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors group">
@@ -410,7 +410,7 @@ const IPVAControl: React.FC = () => {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-bold text-slate-500 mb-1">Ano Ref.</label>
               <input
@@ -418,7 +418,7 @@ const IPVAControl: React.FC = () => {
                 type="number"
                 value={formData.year}
                 onChange={(e) => setFormData({ ...formData, year: e.target.value })}
-                className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-slate-800 focus:ring-2 focus:ring-primary outline-none transition-all"
+                className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-slate-800 focus:ring-2 focus:ring-primary outline-none transition-all font-bold"
                 placeholder="2024"
               />
             </div>
@@ -430,12 +430,12 @@ const IPVAControl: React.FC = () => {
                 step="0.01"
                 value={formData.value}
                 onChange={(e) => setFormData({ ...formData, value: e.target.value })}
-                className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-slate-800 focus:ring-2 focus:ring-primary outline-none transition-all"
+                className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-slate-800 focus:ring-2 focus:ring-primary outline-none transition-all font-bold"
                 placeholder="0,00"
               />
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-bold text-slate-500 mb-1">Vencimento</label>
               <input

@@ -348,11 +348,11 @@ const PropertyManagement: React.FC = () => {
               <input
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="Buscar por endereço, código ou inquilino"
-                className="w-full pl-12 pr-4 py-3 bg-slate-50 dark:bg-slate-900/50 border-none rounded-2xl text-sm focus:ring-2 focus:ring-primary transition-all dark:text-white"
+                placeholder="Busca..."
+                className="w-full pl-12 pr-4 py-3 bg-slate-50 dark:bg-slate-900/50 border-none rounded-2xl text-sm focus:ring-2 focus:ring-primary transition-all dark:text-white outline-none"
               />
             </div>
-            <select className="h-12 px-4 bg-slate-50 dark:bg-slate-900/50 border-none rounded-2xl text-sm font-bold text-slate-600 dark:text-slate-300">
+            <select className="h-12 px-4 bg-slate-50 dark:bg-slate-900/50 border-none rounded-2xl text-sm font-bold text-slate-600 dark:text-slate-300 outline-none">
               <option>Status: Todos</option>
               <option>Alugado</option>
               <option>Disponível</option>
@@ -365,18 +365,19 @@ const PropertyManagement: React.FC = () => {
                 <span className="material-symbols-outlined animate-spin text-3xl">sync</span>
               </div>
             ) : (
-              <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr className="bg-slate-50/50 dark:bg-slate-900/50 border-b border-slate-100 dark:border-slate-800">
-                    <th className="p-5 text-[9px] font-black uppercase tracking-[0.2em] text-slate-400">Código</th>
-                    <th className="p-5 text-[9px] font-black uppercase tracking-[0.2em] text-slate-400">Imóvel</th>
-                    <th className="p-5 text-[9px] font-black uppercase tracking-[0.2em] text-slate-400">Inquilino</th>
-                    <th className="p-5 text-[9px] font-black uppercase tracking-[0.2em] text-slate-400">Prox. Reajuste</th>
-                    <th className="p-5 text-[9px] font-black uppercase tracking-[0.2em] text-slate-400">Valor</th>
-                    <th className="p-5 text-[9px] font-black uppercase tracking-[0.2em] text-slate-400 text-center">Status</th>
-                    <th className="p-5 text-[9px] font-black uppercase tracking-[0.2em] text-slate-400 text-right">Ações</th>
-                  </tr>
-                </thead>
+              <div className="table-responsive">
+                <table className="w-full text-left min-w-[900px] md:min-w-full">
+                  <thead>
+                    <tr className="bg-slate-50/50 dark:bg-slate-900/50 border-b border-slate-100 dark:border-slate-800">
+                      <th className="p-5 text-[9px] font-black uppercase tracking-[0.2em] text-slate-400">Código</th>
+                      <th className="p-5 text-[9px] font-black uppercase tracking-[0.2em] text-slate-400">Imóvel</th>
+                      <th className="p-5 text-[9px] font-black uppercase tracking-[0.2em] text-slate-400">Inquilino</th>
+                      <th className="p-5 text-[9px] font-black uppercase tracking-[0.2em] text-slate-400">Próx. Reajuste</th>
+                      <th className="p-5 text-[9px] font-black uppercase tracking-[0.2em] text-slate-400">Valor</th>
+                      <th className="p-5 text-[9px] font-black uppercase tracking-[0.2em] text-slate-400 text-center">Status</th>
+                      <th className="p-5 text-[9px] font-black uppercase tracking-[0.2em] text-slate-400 text-right">Ações</th>
+                    </tr>
+                  </thead>
                 <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                   {filtered.map(p => (
                     <tr
@@ -541,7 +542,7 @@ const PropertyManagement: React.FC = () => {
               placeholder="Endereço completo"
             />
           </div>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-bold text-slate-500 mb-1">Valor</label>
               <input
@@ -569,20 +570,20 @@ const PropertyManagement: React.FC = () => {
 
           {formData.status === 'rented' && (
             <>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-bold text-slate-500 mb-1">Inquilino</label>
-                  <select
-                    required
-                    value={formData.tenantId}
-                    onChange={(e) => setFormData({ ...formData, tenantId: e.target.value })}
-                    className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-slate-800 focus:ring-2 focus:ring-primary outline-none transition-all"
-                  >
-                    <option value="">Selecione...</option>
-                    {clients.map(client => (
-                      <option key={client.id} value={client.id}>{client.name}</option>
-                    ))}
-                  </select>
+                   <label className="block text-xs font-bold text-slate-500 mb-1">Inquilino</label>
+                   <select
+                     required
+                     value={formData.tenantId}
+                     onChange={(e) => setFormData({ ...formData, tenantId: e.target.value })}
+                     className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-slate-800 focus:ring-2 focus:ring-primary outline-none transition-all"
+                   >
+                     <option value="">Selecione...</option>
+                     {clients.map(client => (
+                       <option key={client.id} value={client.id}>{client.name}</option>
+                     ))}
+                   </select>
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-slate-500 mb-1">Dia Venc.</label>

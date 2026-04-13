@@ -177,7 +177,7 @@ const App: React.FC = () => {
   }
 
   return (
-    <div className="flex h-screen overflow-hidden font-sans">
+    <div className="flex h-screen overflow-hidden font-sans bg-slate-50 dark:bg-brand-bg select-none sm:select-text">
       <Sidebar
         activeTab={activeTab}
         setActiveTab={(tab) => { setActiveTab(tab); setIsSidebarOpen(false); }}
@@ -188,23 +188,24 @@ const App: React.FC = () => {
         onClose={() => setIsSidebarOpen(false)}
       />
 
-      <main className="flex-1 flex flex-col h-full bg-slate-50 dark:bg-brand-bg overflow-hidden">
-        {/* Mobile Header */}
-        <header className="md:hidden flex items-center justify-between p-4 bg-white dark:bg-brand-surface border-b border-slate-200 dark:border-slate-800 z-50">
-          <div className="w-32 h-32 flex items-center justify-center overflow-hidden leading-none">
-            <img src="/logo.png" alt="Logo Grupo 3A" className="w-full h-full object-contain" />
+      <main className="flex-1 flex flex-col h-full overflow-hidden relative">
+        {/* Mobile Header - Improved */}
+        <header className="md:hidden sticky top-0 flex items-center justify-between p-4 bg-white/80 dark:bg-brand-surface/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 z-40 transition-all">
+          <div className="h-8 flex items-center gap-3">
+            <img src="/logo.png" alt="Logo" className="h-full object-contain" />
+            <h1 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-tighter">Grupo 3A</h1>
           </div>
           <button
             onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-            className="p-2 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-all"
+            className="w-10 h-10 flex items-center justify-center text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-all active:scale-95"
           >
             <span className="material-symbols-outlined">{isSidebarOpen ? 'close' : 'menu'}</span>
           </button>
         </header>
 
-        {/* Dynamic Content Container */}
-        <div className="flex-1 overflow-y-auto p-6 md:p-10 custom-scrollbar scroll-smooth">
-          <div className="max-w-7xl mx-auto">
+        {/* Dynamic Content Container - Optimized Spacing */}
+        <div className="flex-1 overflow-y-auto overflow-x-hidden p-4 md:p-10 custom-scrollbar scroll-smooth">
+          <div className="max-w-7xl mx-auto space-y-6">
             {renderContent()}
           </div>
         </div>

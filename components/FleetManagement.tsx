@@ -257,19 +257,19 @@ const FleetManagement: React.FC = () => {
       </PageHeader>
 
       <div className="bg-white dark:bg-brand-surface rounded-3xl shadow-sm border border-slate-100 dark:border-slate-800 overflow-hidden">
-        <div className="px-8 py-6 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center gap-4">
+        <div className="px-6 py-4 md:px-8 md:py-6 border-b border-slate-100 dark:border-slate-800 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div className="flex items-center gap-2">
             <span className="material-symbols-outlined text-primary font-black">directions_car</span>
-            <h3 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tighter">Frota Atual</h3>
+            <h3 className="text-base md:text-lg font-black text-slate-900 dark:text-white uppercase tracking-tighter">Frota</h3>
           </div>
-          <div className="relative w-80">
+          <div className="relative w-full md:w-80">
             <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">search</span>
-            <input value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} placeholder="Busca..." className="w-full pl-12 pr-4 py-2.5 bg-slate-50 dark:bg-slate-900/50 rounded-2xl text-sm focus:ring-2 focus:ring-primary outline-none" />
+            <input value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} placeholder="Busca por código ou placa..." className="w-full pl-12 pr-4 py-2.5 bg-slate-50 dark:bg-slate-900/50 rounded-2xl text-sm focus:ring-2 focus:ring-primary outline-none transition-all" />
           </div>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-left">
+        <div className="table-responsive">
+          <table className="w-full text-left min-w-[700px] md:min-w-full">
             <thead>
               <tr className="bg-slate-50 dark:bg-slate-900/50 text-[10px] font-black uppercase text-slate-400 tracking-widest">
                 <th className="px-6 py-4">Detalhes</th>
@@ -313,23 +313,23 @@ const FleetManagement: React.FC = () => {
       <Modal isOpen={isModalOpen} onClose={handleCloseModal} title={isEditing ? "Editar Veículo" : "Novo Veículo"}>
         <div className="space-y-6">
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div><label className="block text-[10px] font-black uppercase text-slate-400 mb-1">Código</label><input required value={formData.code} onChange={(e) => setFormData({...formData, code: e.target.value})} className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-900 rounded-xl outline-none focus:ring-2 focus:ring-primary font-bold" /></div>
               <div><label className="block text-[10px] font-black uppercase text-slate-400 mb-1">Modelo</label><input required value={formData.model} onChange={(e) => setFormData({...formData, model: e.target.value})} className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-900 rounded-xl outline-none focus:ring-2 focus:ring-primary font-bold" /></div>
             </div>
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
               <div><label className="block text-[10px] font-black uppercase text-slate-400 mb-1">Tipo</label><select value={formData.type} onChange={(e) => setFormData({...formData, type: e.target.value as any})} className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-900 rounded-xl font-bold"><option value="moto">Moto</option><option value="carro">Carro</option></select></div>
               <div><label className="block text-[10px] font-black uppercase text-slate-400 mb-1">Ano</label><input type="number" value={formData.year} onChange={(e) => setFormData({...formData, year: e.target.value})} className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-900 rounded-xl font-bold" /></div>
-              <div><label className="block text-[10px] font-black uppercase text-slate-400 mb-1">Placa</label><input required value={formData.plate} onChange={(e) => setFormData({...formData, plate: e.target.value})} className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-900 rounded-xl font-bold uppercase" /></div>
+              <div className="col-span-2 sm:col-span-1"><label className="block text-[10px] font-black uppercase text-slate-400 mb-1">Placa</label><input required value={formData.plate} onChange={(e) => setFormData({...formData, plate: e.target.value})} className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-900 rounded-xl font-bold uppercase" /></div>
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div><label className="block text-[10px] font-black uppercase text-slate-400 mb-1">Cor</label><select value={formData.color} onChange={(e) => setFormData({...formData, color: e.target.value})} className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-900 rounded-xl font-bold"><option value="Preta">Preta</option><option value="Vermelha">Vermelha</option><option value="Azul">Azul</option><option value="Branca">Branca</option></select></div>
               <div><label className="block text-[10px] font-black uppercase text-slate-400 mb-1">Status</label><select value={formData.status} onChange={(e) => setFormData({...formData, status: e.target.value as any})} className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-900 rounded-xl font-bold"><option value="available">Livre</option><option value="rented">Alugado</option><option value="maintenance">Oficina</option></select></div>
             </div>
             {formData.status === 'rented' && (
               <div><label className="block text-[10px] font-black uppercase text-slate-400 mb-1">Cliente</label><select required value={formData.clientId} onChange={(e) => setFormData({...formData, clientId: e.target.value})} className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-900 rounded-xl font-bold"><option value="">Selecione...</option>{clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select></div>
             )}
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div><label className="block text-[10px] font-black uppercase text-slate-400 mb-1">Valor Venda</label><input value={formData.purchaseValue} onChange={(e) => setFormData({...formData, purchaseValue: e.target.value})} className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-900 rounded-xl font-bold" /></div>
               <div><label className="block text-[10px] font-black uppercase text-slate-400 mb-1">KM Compra</label><input type="number" value={formData.purchaseKm} onChange={(e) => setFormData({...formData, purchaseKm: e.target.value})} className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-900 rounded-xl font-bold" /></div>
               <div><label className="block text-[10px] font-black uppercase text-slate-400 mb-1">KM Atual</label><input type="number" value={formData.km} onChange={(e) => setFormData({...formData, km: e.target.value})} className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-900 rounded-xl font-bold" /></div>
@@ -345,14 +345,14 @@ const FleetManagement: React.FC = () => {
               </div>
 
               <div className="bg-slate-50 dark:bg-slate-900/50 p-4 rounded-2xl space-y-3 mb-4 border border-slate-100 dark:border-slate-800">
-                <div className="grid grid-cols-12 gap-2">
-                  <input type="date" value={newMaintenance.date} onChange={e => setNewMaintenance({...newMaintenance, date: e.target.value})} className="col-span-3 p-2 text-[10px] rounded-lg font-bold" />
-                  <input placeholder="Descritivo" value={newMaintenance.description} onChange={e => setNewMaintenance({...newMaintenance, description: e.target.value})} className="col-span-4 p-2 text-[10px] rounded-lg font-bold" />
-                  <input type="number" placeholder="Valor" value={newMaintenance.value} onChange={e => setNewMaintenance({...newMaintenance, value: e.target.value})} className="col-span-2 p-2 text-[10px] rounded-lg font-black" />
-                  <input type="number" placeholder="KM" value={newMaintenance.km_atual} onChange={e => setNewMaintenance({...newMaintenance, km_atual: e.target.value})} className="col-span-2 p-2 text-[10px] rounded-lg font-black" />
-                  <button onClick={() => setNewMaintenance({...newMaintenance, type: newMaintenance.type === 'credit' ? 'debit' : 'credit'})} className={`col-span-1 rounded-lg text-white font-black text-xs ${newMaintenance.type === 'credit' ? 'bg-emerald-500' : 'bg-rose-500'}`}>{newMaintenance.type === 'credit' ? '+' : '-'}</button>
+                <div className="grid grid-cols-1 sm:grid-cols-12 gap-2">
+                  <input type="date" value={newMaintenance.date} onChange={e => setNewMaintenance({...newMaintenance, date: e.target.value})} className="col-span-full sm:col-span-3 p-2 text-[10px] rounded-lg font-bold outline-none" />
+                  <input placeholder="Descritivo" value={newMaintenance.description} onChange={e => setNewMaintenance({...newMaintenance, description: e.target.value})} className="col-span-full sm:col-span-4 p-2 text-[10px] rounded-lg font-bold outline-none border border-transparent focus:border-primary/30" />
+                  <input type="number" placeholder="Valor" value={newMaintenance.value} onChange={e => setNewMaintenance({...newMaintenance, value: e.target.value})} className="col-span-4 sm:col-span-2 p-2 text-[10px] rounded-lg font-black outline-none border border-transparent focus:border-primary/30" />
+                  <input type="number" placeholder="KM" value={newMaintenance.km_atual} onChange={e => setNewMaintenance({...newMaintenance, km_atual: e.target.value})} className="col-span-4 sm:col-span-2 p-2 text-[10px] rounded-lg font-black outline-none border border-transparent focus:border-primary/30" />
+                  <button onClick={() => setNewMaintenance({...newMaintenance, type: newMaintenance.type === 'credit' ? 'debit' : 'credit'})} className={`col-span-4 sm:col-span-1 rounded-lg text-white font-black text-xs ${newMaintenance.type === 'credit' ? 'bg-emerald-500' : 'bg-rose-500'}`}>{newMaintenance.type === 'credit' ? '+' : '-'}</button>
                 </div>
-                <button onClick={handleAddMaintenance} className="w-full py-2 bg-slate-900 text-white rounded-lg text-[10px] font-black uppercase hover:bg-black transition-all">Registrar Manutenção</button>
+                <button onClick={handleAddMaintenance} className="w-full py-2.5 bg-slate-900 text-white rounded-lg text-[10px] font-black uppercase hover:bg-black transition-all shadow-md">Registrar Registro</button>
               </div>
 
               <div className="space-y-2 max-h-96 overflow-y-auto pr-1 custom-scrollbar">
