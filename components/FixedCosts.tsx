@@ -208,16 +208,27 @@ const FixedCosts: React.FC = () => {
       if (checkError) throw checkError;
 
       if (!existing) {
+        const { data: { user } } = await supabase.auth.getUser();
+        const userName = user?.email || 'Sistema';
+
         const { error: transError } = await supabase.from('transactions').insert([{
           description: `Custo Fixo: ${cost.name}`,
           category: cost.category || 'Custo Fixo',
           value: priceVal,
           type: 'out',
           date: new Date().toISOString().split('T')[0],
+          time: new Date().toLocaleTimeString('pt-BR', { hour12: false }).substring(0, 5),
           source_module: 'fixed_costs',
           reference_id: cost.id,
           payment_hash: paymentHash,
-          payment_registered: true
+          payment_registered: true,
+          created_by: userName,
+          responsible: userName,
+          audit_log: [{
+            user: userName,
+            date: new Date().toISOString(),
+            changes: 'Pagamento de custo fixo registrado'
+          }]
         }]);
         if (transError) throw transError;
       }

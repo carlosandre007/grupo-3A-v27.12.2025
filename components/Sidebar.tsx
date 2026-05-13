@@ -20,12 +20,12 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, isDarkMode, 
   const menuItems = [
     { id: NavItem.DASHBOARD, label: 'Dashboard', icon: 'dashboard' },
     { id: NavItem.CASH_FLOW, label: 'Fluxo de Caixa', icon: 'account_balance_wallet' },
+    { id: NavItem.CHARGES, label: 'Escala de Cobrança', icon: 'schedule' },
     { id: NavItem.FIXED_COSTS, label: 'Custo Fixo Mês', icon: 'receipt_long' },
     { id: NavItem.ALERTS, label: 'Alertas', icon: 'notifications', badge: ipvaAlerts > 0 ? '!' : undefined },
     { id: NavItem.SHOPPING_CART, label: 'Carrinho', icon: 'shopping_cart' },
     { id: NavItem.LOC_MOTTUS, label: 'LOC MOTTUS', icon: 'two_wheeler' },
     { id: NavItem.IPVA, label: 'IPVA', icon: 'calendar_today', badge: ipvaAlerts > 0 ? ipvaAlerts : undefined },
-    { id: NavItem.CHARGES, label: 'Escala de Cobrança', icon: 'schedule' },
     { id: NavItem.PROPERTIES, label: 'Imóveis', icon: 'apartment' },
     { id: NavItem.CLIENTS, label: 'Clientes', icon: 'group' },
 

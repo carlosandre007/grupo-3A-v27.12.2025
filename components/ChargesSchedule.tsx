@@ -164,18 +164,29 @@ const ChargesSchedule: React.FC = () => {
         const chargeCatId = charge.id_categoria_financeira || charge.category_id;
         const selectedCategory = categories.find(cat => cat.id === chargeCatId);
         
+        const { data: { user } } = await supabase.auth.getUser();
+        const userName = user?.email || 'Sistema';
+
         const { error: transError } = await supabase.from('transactions').insert([{
           description: `Cobrança - ${charge.clientName} - Escala`,
           category: selectedCategory?.name || charge.category_name || 'Recebimento de Cobrança', 
           value: charge.valor_cobranca,
           type: selectedCategory?.type || 'in',
           date: today.toISOString().split('T')[0],
+          time: new Date().toLocaleTimeString('pt-BR', { hour12: false }).substring(0, 5),
           referencia_id: charge.id,
           origem: 'escala_cobranca',
           source_module: 'charges',
           reference_id: charge.id,
           payment_hash: paymentHash,
-          payment_registered: true
+          payment_registered: true,
+          created_by: userName,
+          responsible: userName,
+          audit_log: [{
+            user: userName,
+            date: new Date().toISOString(),
+            changes: 'Cobrança marcada como recebida'
+          }]
         }]);
 
         if (transError) {

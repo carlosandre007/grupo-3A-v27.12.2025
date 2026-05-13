@@ -4,6 +4,7 @@ import { Category, Transaction } from '../types';
 import { MONTHS } from '../constants';
 import PageHeader from './PageHeader';
 import Modal from './Modal';
+import TransactionDetailDrawer from './TransactionDetailDrawer';
 
 const CashFlow: React.FC = () => {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -11,6 +12,8 @@ const CashFlow: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
 
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
@@ -100,17 +103,35 @@ const CashFlow: React.FC = () => {
 
     const val = parseFloat(formData.value) || 0;
 
-    const dbData = {
+    const { data: { user } } = await supabase.auth.getUser();
+    const userName = user?.email || 'Usuário Desconhecido';
+
+    const dbData: any = {
       description: formData.description,
       category: formData.category,
       value: val,
       type: formData.type,
       date: formData.date,
+      time: new Date().toLocaleTimeString('pt-BR', { hour12: false }).substring(0, 5),
       id_conta: formData.id_conta,
-      origem: 'cash_flow'
+      origem: 'manual',
+      source_module: 'cash_flow',
+      responsible: userName,
+      updated_at: new Date().toISOString()
     };
 
     if (isEditing && formData.id) {
+      // Create audit log entry
+      const oldTransaction = transactions.find(t => t.id === formData.id);
+      const auditEntry = {
+        user: userName,
+        date: new Date().toISOString(),
+        changes: 'Edição manual via Fluxo de Caixa'
+      };
+      
+      dbData.updated_by = userName;
+      dbData.audit_log = oldTransaction?.audit_log ? [...oldTransaction.audit_log, auditEntry] : [auditEntry];
+
       const { error } = await supabase
         .from('transactions')
         .update(dbData)
@@ -123,6 +144,13 @@ const CashFlow: React.FC = () => {
         alert('Erro ao atualizar lançamento: ' + error.message);
       }
     } else {
+      dbData.created_by = userName;
+      dbData.audit_log = [{
+        user: userName,
+        date: new Date().toISOString(),
+        changes: 'Criação manual'
+      }];
+
       const { error } = await supabase.from('transactions').insert([dbData]);
 
       if (!error) {
@@ -147,6 +175,11 @@ const CashFlow: React.FC = () => {
     });
     setIsEditing(true);
     setIsModalOpen(true);
+  };
+
+  const handleRowClick = (t: Transaction) => {
+    setSelectedTransaction(t);
+    setIsDrawerOpen(true);
   };
 
   const handleCloseModal = () => {
@@ -309,7 +342,6 @@ const CashFlow: React.FC = () => {
               <thead>
                 <tr className="bg-slate-50/50 dark:bg-slate-900/50">
                   <th className="px-6 py-4 text-[9px] font-black text-slate-400 uppercase tracking-[0.2em]">Data</th>
-                  <th className="px-6 py-4 text-[9px] font-black text-slate-400 uppercase tracking-[0.2em]">Conta</th>
                   <th className="px-6 py-4">
                     <div className="flex items-center min-w-[130px]">
                       <select
@@ -336,11 +368,12 @@ const CashFlow: React.FC = () => {
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                 {filteredTransactions.map((t) => (
-                  <tr key={t.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+                  <tr 
+                    key={t.id} 
+                    onClick={() => handleRowClick(t)}
+                    className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors cursor-pointer group"
+                  >
                     <td className="px-6 py-4 text-sm font-bold text-slate-600 dark:text-slate-400">{new Date(t.date).toLocaleDateString('pt-BR', { timeZone: 'UTC' })}</td>
-                    <td className="px-6 py-4">
-                      <span className="text-[10px] font-bold text-slate-500 uppercase">{banks.find(b => b.id === t.id_conta)?.name || 'N/A'}</span>
-                    </td>
                     <td className="px-6 py-4">
                       <span className="text-[10px] font-black uppercase px-2 py-1 bg-slate-100 dark:bg-slate-800 text-slate-500 rounded-lg">{t.category}</span>
                     </td>
@@ -356,14 +389,14 @@ const CashFlow: React.FC = () => {
                     <td className="px-6 py-4 text-center">
                       <div className="flex items-center justify-center gap-2">
                         <button
-                          onClick={() => handleEditTransaction(t)}
-                          className="p-1 text-slate-400 hover:text-primary transition-all"
+                          onClick={(e) => { e.stopPropagation(); handleEditTransaction(t); }}
+                          className="p-1 text-slate-400 hover:text-primary transition-all opacity-0 group-hover:opacity-100"
                         >
                           <span className="material-symbols-outlined text-lg">edit</span>
                         </button>
                         <button
-                          onClick={() => handleDeleteTransaction(t)}
-                          className="p-1 text-slate-400 hover:text-red-500 transition-all"
+                          onClick={(e) => { e.stopPropagation(); handleDeleteTransaction(t); }}
+                          className="p-1 text-slate-400 hover:text-red-500 transition-all opacity-0 group-hover:opacity-100"
                         >
                           <span className="material-symbols-outlined text-lg">delete</span>
                         </button>
@@ -373,7 +406,7 @@ const CashFlow: React.FC = () => {
                 ))}
                 {filteredTransactions.length === 0 && (
                   <tr>
-                    <td colSpan={5} className="px-6 py-10 text-center text-slate-400 text-sm">
+                    <td colSpan={6} className="px-6 py-10 text-center text-slate-400 text-sm">
                       Nenhum lançamento encontrado.
                     </td>
                   </tr>
@@ -420,8 +453,8 @@ const CashFlow: React.FC = () => {
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="sm:col-span-2">
               <label className="block text-xs font-bold text-slate-500 mb-1">Categoria</label>
               <select
                 required
@@ -438,23 +471,9 @@ const CashFlow: React.FC = () => {
                 <p className="text-[10px] text-red-500 mt-1">Nenhuma categoria encontrada. Cadastre uma nova.</p>
               )}
             </div>
-            <div>
-              <label className="block text-xs font-bold text-slate-500 mb-1">Banco / Conta</label>
-              <select
-                required
-                value={formData.id_conta}
-                onChange={(e) => setFormData({ ...formData, id_conta: e.target.value })}
-                className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-slate-800 focus:ring-2 focus:ring-primary outline-none transition-all"
-              >
-                <option value="">Selecione...</option>
-                {banks.map(b => (
-                  <option key={b.id} value={b.id}>{b.name}</option>
-                ))}
-              </select>
-            </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-bold text-slate-500 mb-1">Valor (R$)</label>
               <input
@@ -570,6 +589,21 @@ const CashFlow: React.FC = () => {
           </div>
         </div>
       </Modal>
+
+      <TransactionDetailDrawer
+        isOpen={isDrawerOpen}
+        onClose={() => setIsDrawerOpen(false)}
+        transaction={selectedTransaction}
+        banks={banks}
+        onEdit={(t) => {
+          setIsDrawerOpen(false);
+          handleEditTransaction(t);
+        }}
+        onDelete={(t) => {
+          setIsDrawerOpen(false);
+          handleDeleteTransaction(t);
+        }}
+      />
     </div>
   );
 };

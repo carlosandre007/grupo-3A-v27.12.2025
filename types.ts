@@ -226,12 +226,22 @@ export interface Transaction {
   value: number;
   type: 'in' | 'out';
   date: string;
+  time?: string;
   id_conta?: string;
   origem?: string;
   source_module?: string;
   reference_id?: string;
   payment_hash?: string;
   payment_registered?: boolean;
+  responsible?: string;
+  observation?: string;
+  status?: string;
+  receipt_url?: string;
+  created_by?: string;
+  updated_by?: string;
+  created_at?: string;
+  updated_at?: string;
+  audit_log?: any[];
 }
 
 export interface MonthlyBankMovement {
