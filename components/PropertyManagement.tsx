@@ -197,21 +197,38 @@ const PropertyManagement: React.FC = () => {
       if (payError) throw payError;
 
       // 4. Insert into transactions (Cash Flow)
-      // If we found a charge, we use it as reference to avoid duplication in Financeiro
-      const monthName = now.toLocaleString('pt-BR', { month: 'long' });
-      const { error: transError } = await supabase
-        .from('transactions')
-        .insert([{
-          date: now.toISOString().split('T')[0],
-          description: `Aluguel - ${p.description} - ${monthName}/${year}`,
-          value: p.value,
-          type: 'in',
-          category: 'Aluguel',
-          referencia_id: chargeId, // This prevents duplication if the user tries to pay via Escala de Cobrança later
-          origem: chargeId ? 'escala_cobranca' : 'imoveis'
-        }]);
+      // Anti-duplication Hash: module + id + month + year + value
+      const paymentHash = `properties_${p.id}_${month}_${year}_${p.value}`;
 
-      if (transError) throw transError;
+      // Check if transaction already exists for this hash
+      const { data: existingTrans } = await supabase
+        .from('transactions')
+        .select('id')
+        .eq('payment_hash', paymentHash)
+        .maybeSingle();
+
+      if (!existingTrans) {
+        const monthName = now.toLocaleString('pt-BR', { month: 'long' });
+        const { error: transError } = await supabase
+          .from('transactions')
+          .insert([{
+            date: now.toISOString().split('T')[0],
+            description: `Aluguel - ${p.description} - ${monthName}/${year}`,
+            value: p.value,
+            type: 'in',
+            category: 'Aluguel',
+            referencia_id: chargeId, 
+            origem: chargeId ? 'escala_cobranca' : 'imoveis',
+            source_module: 'properties',
+            reference_id: p.id,
+            payment_hash: paymentHash,
+            payment_registered: true
+          }]);
+
+        if (transError) throw transError;
+      } else {
+        console.warn('Lançamento no fluxo de caixa já existia (hash detectado).');
+      }
 
       // 5. Generate PDF Receipt
       generateReceiptPDF({
@@ -477,10 +494,11 @@ const PropertyManagement: React.FC = () => {
                   )}
                 </tbody>
               </table>
-            )}
-          </div>
+            </div>
+          )}
         </div>
       </div>
+    </div>
 
       {/* Add Property Modal */}
       <Modal

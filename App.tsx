@@ -12,6 +12,7 @@ import BankManagement from './components/BankManagement';
 import BackupRestore from './components/BackupRestore';
 import AlertsView from './components/AlertsView';
 import ShoppingCartView from './components/ShoppingCartView';
+import FixedCosts from './components/FixedCosts';
 import Login from './components/Login';
 
 
@@ -129,6 +130,8 @@ const App: React.FC = () => {
         return <ShoppingCartView />;
       case NavItem.CHARGES:
         return <ChargesSchedule />;
+      case NavItem.FIXED_COSTS:
+        return <FixedCosts />;
 
       case NavItem.CLIENTS:
         return <ClientManagement

@@ -145,12 +145,18 @@ const ChargesSchedule: React.FC = () => {
 
     // 2. Integration: Charges -> Cash Flow
     if (newStatus === 'received') {
-      // Check if transaction already exists for this charge
+      const today = new Date();
+      const month = today.getMonth() + 1;
+      const year = today.getFullYear();
+      
+      // Anti-duplication Hash: module + id + date + value
+      const paymentHash = `charges_${charge.id}_${charge.date}_${charge.valor_cobranca}`;
+
+      // Check if transaction already exists for this hash or reference_id
       const { data: existingTrans } = await supabase
         .from('transactions')
         .select('id')
-        .eq('referencia_id', charge.id)
-        .eq('value', charge.valor_cobranca)
+        .or(`payment_hash.eq.${paymentHash},referencia_id.eq.${charge.id}`)
         .maybeSingle();
 
       if (!existingTrans) {
@@ -163,9 +169,13 @@ const ChargesSchedule: React.FC = () => {
           category: selectedCategory?.name || charge.category_name || 'Recebimento de Cobrança', 
           value: charge.valor_cobranca,
           type: selectedCategory?.type || 'in',
-          date: new Date().toISOString().split('T')[0],
+          date: today.toISOString().split('T')[0],
           referencia_id: charge.id,
-          origem: 'escala_cobranca'
+          origem: 'escala_cobranca',
+          source_module: 'charges',
+          reference_id: charge.id,
+          payment_hash: paymentHash,
+          payment_registered: true
         }]);
 
         if (transError) {
@@ -174,6 +184,8 @@ const ChargesSchedule: React.FC = () => {
         } else {
           alert('Sucesso! Cobrança recebida e registrada no Fluxo de Caixa.');
         }
+      } else {
+        console.warn('Lançamento no fluxo de caixa já existia.');
       }
     }
 

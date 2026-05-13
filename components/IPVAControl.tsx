@@ -368,9 +368,10 @@ const IPVAControl: React.FC = () => {
                 </tr>
               )}
             </tbody>
-          </table>
-        )}
-      </div>
+              </table>
+            </div>
+          )}
+        </div>
 
       {/* Add/Edit IPVA Modal */}
       <Modal

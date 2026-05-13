@@ -10,7 +10,8 @@ export enum NavItem {
   PROPERTIES = 'properties',
   CLIENTS = 'clients',
   BANKS = 'banks',
-  BACKUP = 'backup'
+  BACKUP = 'backup',
+  FIXED_COSTS = 'fixed_costs'
 }
 
 export type RiskClassification = 'Extremo' | 'Muito Alto' | 'Alto' | 'Moderado' | 'Baixo' | 'Mínimo';
@@ -227,6 +228,10 @@ export interface Transaction {
   date: string;
   id_conta?: string;
   origem?: string;
+  source_module?: string;
+  reference_id?: string;
+  payment_hash?: string;
+  payment_registered?: boolean;
 }
 
 export interface MonthlyBankMovement {
@@ -238,4 +243,26 @@ export interface MonthlyBankMovement {
   saida_mes: number;
   data_atualizacao?: string;
   usuario?: string;
+}
+
+export interface FixedCost {
+  id: string;
+  name: string;
+  invoice: string;
+  price: number;
+  qty: number;
+  total: number;
+  due_date: string;
+  status: 'paid' | 'pending';
+  category?: string;
+  month: number;
+  year: number;
+  payment_method?: string;
+  id_conta?: string;
+  paid_at?: string;
+  observation?: string;
+  company?: string;
+  is_recurrent?: boolean;
+  carry_forward_value?: boolean;
+  created_at?: string;
 }
