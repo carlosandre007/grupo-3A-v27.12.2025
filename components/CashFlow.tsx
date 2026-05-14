@@ -27,6 +27,7 @@ const CashFlow: React.FC = () => {
     type: 'in' as 'in' | 'out',
     date: new Date().toISOString().split('T')[0],
     id_conta: '',
+    observation: '',
     id: ''
   });
 
@@ -46,7 +47,7 @@ const CashFlow: React.FC = () => {
   // Financial Summaries (Filtered)
   const filteredTransactions = useMemo(() => {
     return transactions.filter(t => {
-      // Using getUTCFullYear and getUTCMonth to avoid timezone shift issues with date strings like '2026-02-20'
+      if (!t.date) return false;
       const dateParts = t.date.split('-');
       const y = parseInt(dateParts[0]);
       const m = parseInt(dateParts[1]) - 1;
@@ -67,7 +68,8 @@ const CashFlow: React.FC = () => {
     const { data, error } = await supabase
       .from('transactions')
       .select('*')
-      .order('date', { ascending: false });
+      .order('date', { ascending: false })
+      .order('created_at', { ascending: false });
 
     if (!error && data) {
       setTransactions(data);
@@ -113,7 +115,8 @@ const CashFlow: React.FC = () => {
       type: formData.type,
       date: formData.date,
       time: new Date().toLocaleTimeString('pt-BR', { hour12: false }).substring(0, 5),
-      id_conta: formData.id_conta,
+      id_conta: formData.id_conta || null,
+      observation: formData.observation,
       origem: 'manual',
       source_module: 'cash_flow',
       responsible: userName,
@@ -138,6 +141,11 @@ const CashFlow: React.FC = () => {
         .eq('id', formData.id);
 
       if (!error) {
+        // Sync view with the transaction date
+        const [y, m] = formData.date.split('-');
+        setSelectedYear(parseInt(y));
+        setSelectedMonth(parseInt(m) - 1);
+        
         await fetchTransactions();
         handleCloseModal();
       } else {
@@ -154,6 +162,11 @@ const CashFlow: React.FC = () => {
       const { error } = await supabase.from('transactions').insert([dbData]);
 
       if (!error) {
+        // Sync view with the transaction date to ensure it appears
+        const [y, m] = formData.date.split('-');
+        setSelectedYear(parseInt(y));
+        setSelectedMonth(parseInt(m) - 1);
+        
         await fetchTransactions();
         handleCloseModal();
       } else {
@@ -171,6 +184,7 @@ const CashFlow: React.FC = () => {
       type: t.type,
       date: t.date,
       id_conta: t.id_conta || '',
+      observation: t.observation || '',
       id: t.id
     });
     setIsEditing(true);
@@ -192,6 +206,7 @@ const CashFlow: React.FC = () => {
       type: 'in',
       date: new Date().toISOString().split('T')[0],
       id_conta: '',
+      observation: '',
       id: ''
     });
   };
@@ -298,7 +313,20 @@ const CashFlow: React.FC = () => {
             <span className="material-symbols-outlined text-lg">category</span> Categorias
           </button>
           <button
-            onClick={() => setIsModalOpen(true)}
+            onClick={() => {
+              setIsEditing(false);
+              setFormData({
+                description: '',
+                category: '',
+                value: '',
+                type: 'in',
+                date: new Date().toISOString().split('T')[0],
+                id_conta: '',
+                observation: '',
+                id: ''
+              });
+              setIsModalOpen(true);
+            }}
             className="w-full md:w-auto px-6 py-2.5 bg-primary text-slate-900 rounded-2xl text-sm font-black shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-2"
           >
             <span className="material-symbols-outlined text-xl">add</span> Novo
@@ -471,6 +499,16 @@ const CashFlow: React.FC = () => {
                 <p className="text-[10px] text-red-500 mt-1">Nenhuma categoria encontrada. Cadastre uma nova.</p>
               )}
             </div>
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold text-slate-500 mb-1">Observações</label>
+            <textarea
+              value={formData.observation}
+              onChange={(e) => setFormData({ ...formData, observation: e.target.value })}
+              className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-slate-800 focus:ring-2 focus:ring-primary outline-none transition-all resize-none h-20"
+              placeholder="Notas adicionais sobre este lançamento..."
+            />
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

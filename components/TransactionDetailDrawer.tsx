@@ -127,13 +127,7 @@ const TransactionDetailDrawer: React.FC<TransactionDetailDrawerProps> = ({
                       {transaction.category}
                     </span>
                   </div>
-                  <div className="flex items-center justify-between p-4 bg-white dark:bg-brand-surface rounded-2xl border border-slate-100 dark:border-slate-800">
-                    <div className="flex items-center gap-3">
-                      <span className="material-symbols-outlined text-slate-400">account_balance</span>
-                      <span className="text-xs font-bold text-slate-500">Conta Bancária</span>
-                    </div>
-                    <span className="text-xs font-black text-slate-700 dark:text-slate-200">{bankName}</span>
-                  </div>
+
                 </div>
               </section>
 
