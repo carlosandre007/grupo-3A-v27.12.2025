@@ -246,15 +246,47 @@ const PropertyManagement: React.FC = () => {
       }
 
       // 5. Generate PDF Receipt Data
+      let tenantCpf = '-';
+      let tenantPhone = '-';
+      let tenantEmail = '-';
+
+      try {
+        const { data: cli } = await supabase
+          .from('clients')
+          .select('cpf, phone')
+          .eq('id', p.tenantId)
+          .limit(1)
+          .maybeSingle();
+
+        if (cli) {
+          tenantCpf = cli.cpf || '-';
+          tenantPhone = cli.phone || '-';
+          tenantEmail = (p.tenant || 'inquilino').toLowerCase().replace(/\s+/g, '.') + '@example.com';
+        }
+      } catch (err) {
+        console.warn('Erro ao buscar cliente correspondente:', err);
+      }
+
+      const formattedMonth = month.toString().padStart(2, '0');
+      const dDay = p.dueDay || 10;
+      const formattedDueDay = String(dDay).padStart(2, '0');
+      const dueDateStr = `${formattedDueDay}/${formattedMonth}/${year}`;
+
       const recData = {
         propertyCode: p.code,
         propertyDescription: p.description,
         propertyAddress: p.address,
         tenantName: p.tenant || 'Inquilino',
+        tenantCpf,
+        tenantPhone,
+        tenantEmail,
         amount: p.value,
-        month: month.toString().padStart(2, '0'),
+        month: formattedMonth,
         year: year,
-        date: now.toLocaleDateString('pt-BR')
+        date: now.toLocaleDateString('pt-BR'),
+        dueDate: dueDateStr,
+        paymentMethod: 'PIX',
+        receiptCode: `rec-${year}-${formattedMonth}-${String(p.id || Math.floor(Math.random() * 800) + 100).replace(/[^0-9]/g, '').slice(0, 4).padStart(4, '0')}`
       };
 
       // 6. Update UI

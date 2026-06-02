@@ -32,9 +32,12 @@ const ChargesSchedule: React.FC = () => {
   const [isEditMode, setIsEditMode] = useState(false);
   const [editingCharge, setEditingCharge] = useState<Charge | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [clients, setClients] = useState<any[]>([]);
+  const [properties, setProperties] = useState<any[]>([]);
   const [formData, setFormData] = useState({
     id: '',
     clientName: '',
+    propertyId: '', // Vinculo com imovel
     id_categoria_financeira: '',
     valor_cobranca: '',
     date: new Date().toISOString().split('T')[0],
@@ -121,9 +124,28 @@ const ChargesSchedule: React.FC = () => {
       setCharges(mapped);
   };
 
+  const fetchClientsAndProperties = async () => {
+    try {
+      const { data: clientsData } = await supabase
+        .from('clients')
+        .select('id, name, cpf, phone')
+        .order('name');
+      if (clientsData) setClients(clientsData);
+
+      const { data: propsData } = await supabase
+        .from('properties')
+        .select('id, code, description, value, tenant, tenant_id, due_day')
+        .order('code');
+      if (propsData) setProperties(propsData);
+    } catch (err) {
+      console.warn('Erro ao carregar clientes/imoveis:', err);
+    }
+  };
+
   useEffect(() => {
     fetchCharges();
     fetchCategories();
+    fetchClientsAndProperties();
   }, [currentDate]);
 
   const toggleCharge = async (charge: Charge) => {
@@ -210,22 +232,72 @@ const ChargesSchedule: React.FC = () => {
       let propertyCode = charge.ref || 'REC-01';
       let propertyDescription = charge.category_name || charge.ref || 'Cobrança';
       let propertyAddress = '-';
+      let tenantName = charge.clientName;
+      let tenantCpf = '-';
+      let tenantPhone = '-';
+      let tenantEmail = '-';
+      let tenantId = null;
 
       try {
-        const { data: prop } = await supabase
-          .from('properties')
-          .select('code, description, address')
-          .eq('tenant', charge.clientName)
-          .limit(1)
-          .maybeSingle();
+        // 1. Try to fetch property by code (using charge.ref) or by tenant name
+        let prop = null;
+        if (charge.ref && charge.ref !== 'Sem Categoria' && !categories.some(c => c.name === charge.ref)) {
+          const { data } = await supabase
+            .from('properties')
+            .select('code, description, address, tenant_id, tenant')
+            .ilike('code', charge.ref.trim())
+            .limit(1)
+            .maybeSingle();
+          prop = data;
+        }
+
+        if (!prop) {
+          const { data } = await supabase
+            .from('properties')
+            .select('code, description, address, tenant_id, tenant')
+            .ilike('tenant', charge.clientName.trim())
+            .limit(1)
+            .maybeSingle();
+          prop = data;
+        }
 
         if (prop) {
           propertyCode = prop.code;
           propertyDescription = prop.description;
-          propertyAddress = prop.address;
+          propertyAddress = prop.address || '-';
+          tenantName = prop.tenant || charge.clientName;
+          tenantId = prop.tenant_id;
+        }
+
+        // 2. Fetch Client using tenantId, prop.tenant or tenantName
+        let cli = null;
+        if (tenantId) {
+          const { data } = await supabase
+            .from('clients')
+            .select('cpf, phone')
+            .eq('id', tenantId)
+            .limit(1)
+            .maybeSingle();
+          cli = data;
+        }
+
+        if (!cli && tenantName) {
+          const { data } = await supabase
+            .from('clients')
+            .select('cpf, phone')
+            .ilike('name', tenantName.trim())
+            .limit(1)
+            .maybeSingle();
+          cli = data;
+        }
+
+        if (cli) {
+          tenantCpf = cli.cpf || '-';
+          tenantPhone = cli.phone || '-';
+          tenantEmail = tenantName.toLowerCase().replace(/\s+/g, '.') + '@example.com';
         }
       } catch (err) {
-        console.warn('Erro ao buscar imóvel correspondente:', err);
+        console.warn('Erro ao carregar dados do imóvel e inquilino:', err);
       }
 
       const dateObj = new Date(charge.date);
@@ -236,11 +308,17 @@ const ChargesSchedule: React.FC = () => {
         propertyCode,
         propertyDescription,
         propertyAddress,
-        tenantName: charge.clientName,
+        tenantName: tenantName,
+        tenantCpf,
+        tenantPhone,
+        tenantEmail,
         amount: charge.valor_cobranca,
         month: chargeMonthStr,
         year: chargeYearVal,
-        date: new Date().toLocaleDateString('pt-BR')
+        date: new Date().toLocaleDateString('pt-BR'),
+        dueDate: new Date(charge.date + 'T12:00:00').toLocaleDateString('pt-BR'),
+        paymentMethod: 'PIX',
+        receiptCode: `rec-${chargeYearVal}-${chargeMonthStr}-${String(charge.id || Math.floor(Math.random() * 800) + 100).replace(/[^0-9]/g, '').slice(0, 4).padStart(4, '0')}`
       });
       setIsReceiptModalOpen(true);
     }
@@ -290,9 +368,11 @@ const ChargesSchedule: React.FC = () => {
     e.stopPropagation();
     setEditingCharge(charge);
     setIsEditMode(true);
+    const matchingProp = properties.find(p => p.code === charge.ref);
     setFormData({
       id: charge.id,
       clientName: charge.clientName,
+      propertyId: matchingProp ? matchingProp.id : '',
       id_categoria_financeira: charge.id_categoria_financeira || '',
       valor_cobranca: charge.valor_cobranca.toString(),
       date: charge.date,
@@ -357,22 +437,72 @@ const ChargesSchedule: React.FC = () => {
     let propertyCode = charge.ref || 'REC-01';
     let propertyDescription = charge.category_name || charge.ref || 'Cobrança';
     let propertyAddress = '-';
+    let tenantName = charge.clientName;
+    let tenantCpf = '-';
+    let tenantPhone = '-';
+    let tenantEmail = '-';
+    let tenantId = null;
 
     try {
-      const { data: prop } = await supabase
-        .from('properties')
-        .select('code, description, address')
-        .eq('tenant', charge.clientName)
-        .limit(1)
-        .maybeSingle();
+      // 1. Try to fetch property by code (using charge.ref) or by tenant name
+      let prop = null;
+      if (charge.ref && charge.ref !== 'Sem Categoria' && !categories.some(c => c.name === charge.ref)) {
+        const { data } = await supabase
+          .from('properties')
+          .select('code, description, address, tenant_id, tenant')
+          .ilike('code', charge.ref.trim())
+          .limit(1)
+          .maybeSingle();
+        prop = data;
+      }
+
+      if (!prop) {
+        const { data } = await supabase
+          .from('properties')
+          .select('code, description, address, tenant_id, tenant')
+          .ilike('tenant', charge.clientName.trim())
+          .limit(1)
+          .maybeSingle();
+        prop = data;
+      }
 
       if (prop) {
         propertyCode = prop.code;
         propertyDescription = prop.description;
-        propertyAddress = prop.address;
+        propertyAddress = prop.address || '-';
+        tenantName = prop.tenant || charge.clientName;
+        tenantId = prop.tenant_id;
+      }
+
+      // 2. Fetch Client using tenantId, prop.tenant or tenantName
+      let cli = null;
+      if (tenantId) {
+        const { data } = await supabase
+          .from('clients')
+          .select('cpf, phone')
+          .eq('id', tenantId)
+          .limit(1)
+          .maybeSingle();
+        cli = data;
+      }
+
+      if (!cli && tenantName) {
+        const { data } = await supabase
+          .from('clients')
+          .select('cpf, phone')
+          .ilike('name', tenantName.trim())
+          .limit(1)
+          .maybeSingle();
+        cli = data;
+      }
+
+      if (cli) {
+        tenantCpf = cli.cpf || '-';
+        tenantPhone = cli.phone || '-';
+        tenantEmail = tenantName.toLowerCase().replace(/\s+/g, '.') + '@example.com';
       }
     } catch (err) {
-      console.warn('Erro ao buscar imóvel correspondente:', err);
+      console.warn('Erro ao carregar dados do imóvel e inquilino:', err);
     }
 
     const dateObj = new Date(charge.date);
@@ -383,11 +513,17 @@ const ChargesSchedule: React.FC = () => {
       propertyCode,
       propertyDescription,
       propertyAddress,
-      tenantName: charge.clientName,
+      tenantName: tenantName,
+      tenantCpf,
+      tenantPhone,
+      tenantEmail,
       amount: charge.valor_cobranca,
       month: chargeMonthStr,
       year: chargeYearVal,
-      date: new Date().toLocaleDateString('pt-BR')
+      date: new Date().toLocaleDateString('pt-BR'),
+      dueDate: new Date(charge.date + 'T12:00:00').toLocaleDateString('pt-BR'),
+      paymentMethod: 'PIX',
+      receiptCode: `rec-${chargeYearVal}-${chargeMonthStr}-${String(charge.id || Math.floor(Math.random() * 800) + 100).replace(/[^0-9]/g, '').slice(0, 4).padStart(4, '0')}`
     });
     setIsReceiptModalOpen(true);
   };
@@ -407,14 +543,13 @@ const ChargesSchedule: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
-
     const val = parseFloat(formData.valor_cobranca) || 0;
     const clientNameClean = formData.clientName.trim();
     const selectedCategory = categories.find(c => c.id === formData.id_categoria_financeira);
-
+    const selectedProp = properties.find(p => p.id === formData.propertyId);
     const dbData = {
       client_name: clientNameClean,
-      ref: selectedCategory?.name || 'Sem Categoria',
+      ref: selectedProp ? selectedProp.code : (selectedCategory?.name || 'Sem Categoria'),
       id_categoria_financeira: formData.id_categoria_financeira,
       category_id: formData.id_categoria_financeira, // Compatibilidade
       valor_cobranca: val,
@@ -483,6 +618,7 @@ const ChargesSchedule: React.FC = () => {
     setFormData({
       id: '',
       clientName: '',
+      propertyId: '', // reset vinculo
       id_categoria_financeira: '',
       valor_cobranca: '',
       date: new Date().toISOString().split('T')[0],
@@ -719,13 +855,75 @@ const ChargesSchedule: React.FC = () => {
         title={isEditMode ? "Editar Cobrança" : "Nova Cobrança"}
       >
         <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-bold text-slate-500 mb-1">Vincular a um Imóvel Cadastrado (Opcional)</label>
+              <select
+                value={formData.propertyId}
+                onChange={(e) => {
+                  const propId = e.target.value;
+                  const selectedProp = properties.find(p => p.id === propId);
+                  if (selectedProp) {
+                    const rentCategory = categories.find(c => c.name.toLowerCase().includes('aluguel'));
+                    
+                    // Format due date to match selectedProp.due_day in current month
+                    const now = new Date();
+                    const year = now.getFullYear();
+                    const monthStr = String(now.getMonth() + 1).padStart(2, '0');
+                    const dDay = selectedProp.due_day || 10;
+                    const calculatedDate = `${year}-${monthStr}-${String(dDay).padStart(2, '0')}`;
+
+                    setFormData(prev => ({
+                      ...prev,
+                      propertyId: propId,
+                      clientName: selectedProp.tenant || prev.clientName,
+                      valor_cobranca: selectedProp.value ? selectedProp.value.toString() : prev.valor_cobranca,
+                      frequency: 'monthly',
+                      isRecurring: true,
+                      date: calculatedDate,
+                      id_categoria_financeira: rentCategory ? rentCategory.id : prev.id_categoria_financeira
+                    }));
+                  } else {
+                    setFormData(prev => ({ ...prev, propertyId: '' }));
+                  }
+                }}
+                className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-slate-800 focus:ring-2 focus:ring-primary outline-none transition-all font-bold"
+              >
+                <option value="">-- Sem vínculo de Imóvel --</option>
+                {properties.map(p => (
+                  <option key={p.id} value={p.id}>{p.code} - {p.description} {p.tenant ? `(Inquilino: ${p.tenant})` : '(Disponível)'}</option>
+                ))}
+              </select>
+            </div>
+            
+            <div>
+              <label className="block text-xs font-bold text-slate-500 mb-1">Puxar Cliente Cadastrado (Opcional)</label>
+              <select
+                value=""
+                onChange={(e) => {
+                  const cliId = e.target.value;
+                  const selectedCli = clients.find(c => c.id === cliId);
+                  if (selectedCli) {
+                    setFormData(prev => ({ ...prev, clientName: selectedCli.name }));
+                  }
+                }}
+                className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-slate-800 focus:ring-2 focus:ring-primary outline-none transition-all font-bold"
+              >
+                <option value="">-- Selecione para preencher o nome --</option>
+                {clients.map(c => (
+                  <option key={c.id} value={c.id}>{c.name} {c.cpf ? `(CPF: ${c.cpf})` : ''}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
           <div>
-            <label className="block text-xs font-bold text-slate-500 mb-1">Nome do Cliente</label>
+            <label className="block text-xs font-bold text-slate-500 mb-1">Nome do Cliente (Editável)</label>
             <input
               required
               value={formData.clientName}
               onChange={(e) => setFormData({ ...formData, clientName: e.target.value })}
-              className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-slate-800 focus:ring-2 focus:ring-primary outline-none transition-all"
+              className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-slate-800 focus:ring-2 focus:ring-primary outline-none transition-all font-bold"
               placeholder="Ex: João da Silva"
             />
           </div>
