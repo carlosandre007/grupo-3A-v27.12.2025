@@ -85,3 +85,112 @@
   font-variation-settings: 'FILL' 1;
 }
 
+/* Premium SaaS styling & animations */
+.sidebar-glass {
+  background: rgba(255, 255, 255, 0.45);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-right: 1px solid rgba(241, 245, 249, 0.5);
+}
+
+.dark .sidebar-glass {
+  background: rgba(15, 23, 42, 0.45);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-right: 1px solid rgba(30, 41, 59, 0.35);
+}
+
+/* Micro-animations: Hover shifts & scales */
+.saas-hover-item {
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.saas-hover-item:hover {
+  transform: translateX(4px) scale(1.015);
+}
+
+.saas-card-hover {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.saas-card-hover:hover {
+  transform: translateY(-4px) scale(1.01);
+  box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.08);
+}
+
+.dark .saas-card-hover:hover {
+  box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.45);
+}
+
+/* Interactive active border */
+.saas-active-border {
+  position: relative;
+}
+
+.saas-active-border::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 15%;
+  height: 70%;
+  width: 4px;
+  border-radius: 4px;
+  background-color: rgb(var(--color-primary, 59, 130, 246));
+  transition: all 0.3s ease;
+}
+
+/* Tooltip Custom styling */
+.saas-tooltip {
+  position: absolute;
+  left: calc(100% + 12px);
+  padding: 6px 12px;
+  background-color: #0f172a;
+  color: #ffffff;
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  border-radius: 8px;
+  opacity: 0;
+  pointer-events: none;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  white-space: nowrap;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+  z-index: 9999;
+}
+
+.saas-tooltip::after {
+  content: '';
+  position: absolute;
+  right: 100%;
+  top: 50%;
+  transform: translateY(-50%);
+  border-width: 5px;
+  border-style: solid;
+  border-color: transparent #0f172a transparent transparent;
+}
+
+/* Display tooltip on hover when parent is collapsed */
+.group:hover .saas-tooltip {
+  opacity: 1;
+  transform: translateX(4px);
+}
+
+/* Interactive elements micro-animations */
+button, input, select {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+button:active, select:active {
+  transform: scale(0.96);
+}
+
+table tbody tr {
+  transition: background-color 0.2s ease, transform 0.2s ease;
+}
+
+table tbody tr:hover {
+  transform: scale(1.002);
+}
+
+

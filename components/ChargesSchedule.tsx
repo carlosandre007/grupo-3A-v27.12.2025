@@ -3,6 +3,9 @@ import { supabase } from '../lib/supabase';
 import { Charge, Category, ChargeEditLog } from '../types';
 import PageHeader from './PageHeader';
 import Modal from './Modal';
+import { ReceiptData } from '../utils/receiptGenerator';
+import ReceiptModal from './ReceiptModal';
+import { logDeletion } from '../utils/logger';
 
 // Helper to get days of the current week based on a reference date
 const getDaysOfWeek = (current: Date) => {
@@ -43,6 +46,10 @@ const ChargesSchedule: React.FC = () => {
   });
   const [submitting, setSubmitting] = useState(false);
 
+  // States for Receipt Preview
+  const [receiptData, setReceiptData] = useState<ReceiptData | null>(null);
+  const [isReceiptModalOpen, setIsReceiptModalOpen] = useState(false);
+
   // Derived state
   const weekDays = getDaysOfWeek(currentDate);
   const startOfWeek = weekDays[0];
@@ -65,7 +72,7 @@ const ChargesSchedule: React.FC = () => {
       .from('charges')
       .select(`
         *,
-        categories (
+        categories:categories!id_categoria_financeira (
           name
         )
       `)
@@ -193,11 +200,49 @@ const ChargesSchedule: React.FC = () => {
           console.error('Erro ao gerar lançamento no fluxo de caixa:', transError.message);
           alert('Atenção: A cobrança foi marcada como paga, mas houve um erro ao registrar no Fluxo de Caixa: ' + transError.message);
         } else {
-          alert('Sucesso! Cobrança recebida e registrada no Fluxo de Caixa.');
+          // Success, continue silently to receipt modal
         }
       } else {
         console.warn('Lançamento no fluxo de caixa já existia.');
       }
+
+      // Generate and show receipt preview
+      let propertyCode = charge.ref || 'REC-01';
+      let propertyDescription = charge.category_name || charge.ref || 'Cobrança';
+      let propertyAddress = '-';
+
+      try {
+        const { data: prop } = await supabase
+          .from('properties')
+          .select('code, description, address')
+          .eq('tenant', charge.clientName)
+          .limit(1)
+          .maybeSingle();
+
+        if (prop) {
+          propertyCode = prop.code;
+          propertyDescription = prop.description;
+          propertyAddress = prop.address;
+        }
+      } catch (err) {
+        console.warn('Erro ao buscar imóvel correspondente:', err);
+      }
+
+      const dateObj = new Date(charge.date);
+      const chargeMonthStr = (dateObj.getMonth() + 1).toString().padStart(2, '0');
+      const chargeYearVal = dateObj.getFullYear();
+
+      setReceiptData({
+        propertyCode,
+        propertyDescription,
+        propertyAddress,
+        tenantName: charge.clientName,
+        amount: charge.valor_cobranca,
+        month: chargeMonthStr,
+        year: chargeYearVal,
+        date: new Date().toLocaleDateString('pt-BR')
+      });
+      setIsReceiptModalOpen(true);
     }
 
     // 3. Handle Recurrence
@@ -290,32 +335,61 @@ const ChargesSchedule: React.FC = () => {
       return;
     }
 
+    const charge = charges.find(c => c.id === id);
+    const description = charge 
+      ? `Cliente: ${charge.clientName} | Categoria: ${charge.category_name || charge.ref} | Valor: R$ ${charge.valor_cobranca.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} | Vencimento: ${new Date(charge.date).toLocaleDateString('pt-BR')}`
+      : `Cobrança ID ${id}`;
+
     const { error } = await supabase.from('charges').delete().eq('id', id);
 
     if (error) {
       alert('Erro ao excluir: ' + error.message);
     } else {
+      await logDeletion('charges', id, description);
       fetchCharges();
     }
   };
 
-  const handleEmitReceipt = (charge: Charge, e: React.MouseEvent) => {
+  const handleEmitReceipt = async (charge: Charge, e: React.MouseEvent) => {
     e.stopPropagation();
     
-    // As requested by business rule: Emitir recibo -> NÃO registra no caixa
-    const monthFormatter = new Intl.DateTimeFormat('pt-BR', { month: 'long' });
-    const year = new Date(charge.date).getFullYear();
-    const monthName = monthFormatter.format(new Date(charge.date));
-    
-    alert('Recibo emitido com sucesso! (Nenhum lançamento no caixa foi criado para evitar duplicidade).');
+    // Generate and show receipt preview
+    let propertyCode = charge.ref || 'REC-01';
+    let propertyDescription = charge.category_name || charge.ref || 'Cobrança';
+    let propertyAddress = '-';
 
-    const msg = encodeURIComponent(`Olá ${charge.clientName}, aqui está a confirmação de recebimento no valor de R$ ${Number(charge.valor_cobranca).toLocaleString('pt-BR', { minimumFractionDigits: 2 })} referente a ${charge.category_name || charge.ref}. Data: ${new Date().toLocaleDateString('pt-BR')}.`);
-    
-    if (confirm('Deseja enviar a confirmação de recebimento por WhatsApp?')) {
-      // In a real scenario you would have the client's phone number here.
-      // We open a generic WhatsApp link that allows the user to pick the contact.
-      window.open(`https://wa.me/?text=${msg}`, '_blank');
+    try {
+      const { data: prop } = await supabase
+        .from('properties')
+        .select('code, description, address')
+        .eq('tenant', charge.clientName)
+        .limit(1)
+        .maybeSingle();
+
+      if (prop) {
+        propertyCode = prop.code;
+        propertyDescription = prop.description;
+        propertyAddress = prop.address;
+      }
+    } catch (err) {
+      console.warn('Erro ao buscar imóvel correspondente:', err);
     }
+
+    const dateObj = new Date(charge.date);
+    const chargeMonthStr = (dateObj.getMonth() + 1).toString().padStart(2, '0');
+    const chargeYearVal = dateObj.getFullYear();
+
+    setReceiptData({
+      propertyCode,
+      propertyDescription,
+      propertyAddress,
+      tenantName: charge.clientName,
+      amount: charge.valor_cobranca,
+      month: chargeMonthStr,
+      year: chargeYearVal,
+      date: new Date().toLocaleDateString('pt-BR')
+    });
+    setIsReceiptModalOpen(true);
   };
 
   const handlePreviousWeek = () => {
@@ -780,6 +854,12 @@ const ChargesSchedule: React.FC = () => {
           </button>
         </form>
       </Modal>
+
+      <ReceiptModal
+        isOpen={isReceiptModalOpen}
+        onClose={() => setIsReceiptModalOpen(false)}
+        data={receiptData}
+      />
     </div >
   );
 };

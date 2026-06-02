@@ -15,6 +15,7 @@ import ShoppingCartView from './components/ShoppingCartView';
 import FixedCosts from './components/FixedCosts';
 import Login from './components/Login';
 import PatrimonioDashboard from './components/PatrimonioDashboard';
+import DeletionLogsView from './components/DeletionLogsView';
 
 
 import { NavItem } from './types';
@@ -146,6 +147,8 @@ const App: React.FC = () => {
         return <BackupRestore />;
       case NavItem.PATRIMONIO:
         return <PatrimonioDashboard />;
+      case NavItem.DELETION_LOGS:
+        return <DeletionLogsView />;
       default:
         return <Dashboard />;
     }

@@ -3,7 +3,9 @@ import { supabase } from '../lib/supabase';
 import { Property, Client } from '../types';
 import PageHeader from './PageHeader';
 import Modal from './Modal';
-import { generateReceiptPDF } from '../utils/receiptGenerator';
+import { generateReceiptPDF, ReceiptData } from '../utils/receiptGenerator';
+import ReceiptModal from './ReceiptModal';
+import { logDeletion } from '../utils/logger';
 
 const PropertyManagement: React.FC = () => {
   const [properties, setProperties] = useState<Property[]>([]);
@@ -15,6 +17,10 @@ const PropertyManagement: React.FC = () => {
   const [selectedPropertyId, setSelectedPropertyId] = useState<string | null>(null);
   const [payments, setPayments] = useState<any[]>([]);
   const [currentMonthPaid, setCurrentMonthPaid] = useState<Record<string, boolean>>({});
+  
+  // States for Receipt Preview
+  const [receiptData, setReceiptData] = useState<ReceiptData | null>(null);
+  const [isReceiptModalOpen, setIsReceiptModalOpen] = useState(false);
 
   const [formData, setFormData] = useState({
     id: '',
@@ -239,8 +245,8 @@ const PropertyManagement: React.FC = () => {
         console.warn('Lançamento no fluxo de caixa já existia (hash detectado).');
       }
 
-      // 5. Generate PDF Receipt
-      generateReceiptPDF({
+      // 5. Generate PDF Receipt Data
+      const recData = {
         propertyCode: p.code,
         propertyDescription: p.description,
         propertyAddress: p.address,
@@ -249,20 +255,14 @@ const PropertyManagement: React.FC = () => {
         month: month.toString().padStart(2, '0'),
         year: year,
         date: now.toLocaleDateString('pt-BR')
-      });
+      };
 
       // 6. Update UI
       setCurrentMonthPaid(prev => ({ ...prev, [p.id]: true }));
-      alert('Pagamento registrado com sucesso! O recibo foi gerado.');
-
-      // 7. Offer WhatsApp/Email
-      const msg = encodeURIComponent(`Olá ${p.tenant}, aqui está o seu recibo de aluguel referente a ${monthName}/${year}.`);
-      const client = clients.find(c => c.id === p.tenantId);
-      const phone = client?.phone.replace(/\D/g, '') || '';
-
-      if (confirm('Deseja enviar a confirmação por WhatsApp?')) {
-        window.open(`https://wa.me/55${phone}?text=${msg}`, '_blank');
-      }
+      
+      // Open the interactive receipt preview modal
+      setReceiptData(recData);
+      setIsReceiptModalOpen(true);
 
     } catch (err: any) {
       alert('Erro ao processar pagamento: ' + err.message);
@@ -316,6 +316,11 @@ const PropertyManagement: React.FC = () => {
 
     if (!confirm(`Tem certeza que deseja excluir permanentemente o imóvel ${code}?`)) return;
 
+    const prop = properties.find(p => p.id === id);
+    const description = prop 
+      ? `Código: ${prop.code} | Descrição: ${prop.description} | Tipo: ${prop.tipo || 'imovel'} | Inquilino: ${prop.tenant || 'Nenhum'} | Valor: R$ ${prop.value.toLocaleString('pt-BR')}`
+      : `Imóvel Código ${code}`;
+
     setLoading(true);
     const { error } = await supabase
       .from('properties')
@@ -323,6 +328,7 @@ const PropertyManagement: React.FC = () => {
       .eq('id', id);
 
     if (!error) {
+      await logDeletion('properties', id, description);
       alert('Imóvel excluído com sucesso!');
       await fetchProperties();
     } else {
@@ -719,6 +725,12 @@ const PropertyManagement: React.FC = () => {
           </div>
         </div>
       </Modal>
+      
+      <ReceiptModal
+        isOpen={isReceiptModalOpen}
+        onClose={() => setIsReceiptModalOpen(false)}
+        data={receiptData}
+      />
     </div>
   );
 };

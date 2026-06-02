@@ -12,7 +12,8 @@ export enum NavItem {
   BANKS = 'banks',
   BACKUP = 'backup',
   FIXED_COSTS = 'fixed_costs',
-  PATRIMONIO = 'patrimonio'
+  PATRIMONIO = 'patrimonio',
+  DELETION_LOGS = 'deletion_logs'
 }
 
 export type RiskClassification = 'Extremo' | 'Muito Alto' | 'Alto' | 'Moderado' | 'Baixo' | 'Mínimo';

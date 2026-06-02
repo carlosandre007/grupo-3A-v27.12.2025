@@ -1,6 +1,6 @@
 import { jsPDF } from 'jspdf';
 
-interface ReceiptData {
+export interface ReceiptData {
     propertyCode: string;
     propertyDescription: string;
     propertyAddress: string;
@@ -11,7 +11,7 @@ interface ReceiptData {
     date: string;
 }
 
-export const generateReceiptPDF = (data: ReceiptData) => {
+export const buildReceiptPDF = (data: ReceiptData) => {
     const doc = new jsPDF();
     const pageWidth = doc.internal.pageSize.getWidth();
 
@@ -74,10 +74,20 @@ export const generateReceiptPDF = (data: ReceiptData) => {
     doc.setFontSize(10);
     doc.text('Assinatura do Locador', pageWidth / 2, 255, { align: 'center' });
 
-    // Save & Share the PDF (Optimized for Mobile/PWA and Desktop)
     const fileName = `Recibo_Aluguel_${data.propertyCode}_${data.month}_${data.year}.pdf`;
     const pdfBlob = doc.output('blob');
     const file = new File([pdfBlob], fileName, { type: 'application/pdf' });
+
+    return {
+        doc,
+        file,
+        fileName,
+        pdfBlob
+    };
+};
+
+export const generateReceiptPDF = (data: ReceiptData) => {
+    const { doc, file, fileName, pdfBlob } = buildReceiptPDF(data);
 
     if (navigator.canShare && navigator.canShare({ files: [file] })) {
         navigator.share({
@@ -88,11 +98,9 @@ export const generateReceiptPDF = (data: ReceiptData) => {
         .then(() => console.log('Recibo compartilhado com sucesso.'))
         .catch((error) => {
             console.error('Erro ao compartilhar:', error);
-            // fallback download if cancelled or fails
             doc.save(fileName);
         });
     } else {
-        // Fallback robust BlobURL download (ideal for Desktop / browsers without sharing API)
         const blobUrl = URL.createObjectURL(pdfBlob);
         const link = document.createElement('a');
         link.href = blobUrl;
