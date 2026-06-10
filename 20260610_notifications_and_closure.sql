@@ -8,6 +8,17 @@ CREATE TABLE IF NOT EXISTS public.notificacoes (
     created_at TIMESTAMPTZ DEFAULT now()
 );
 
+-- Habilitar RLS
+ALTER TABLE public.notificacoes ENABLE ROW LEVEL SECURITY;
+
+-- Políticas de RLS para notificacoes (Liberar acesso para anon e autenticados)
+DROP POLICY IF EXISTS "Permitir tudo para notificacoes" ON public.notificacoes;
+CREATE POLICY "Permitir tudo para notificacoes" 
+ON public.notificacoes FOR ALL 
+TO anon, authenticated 
+USING (true) 
+WITH CHECK (true);
+
 -- Habilitar Realtime na tabela de notificações
 ALTER PUBLICATION supabase_realtime ADD TABLE public.notificacoes;
 
@@ -18,3 +29,14 @@ CREATE TABLE IF NOT EXISTS public.caixa_fechamentos (
     fechado_em TIMESTAMPTZ DEFAULT now(),
     usuario TEXT NOT NULL
 );
+
+-- Habilitar RLS
+ALTER TABLE public.caixa_fechamentos ENABLE ROW LEVEL SECURITY;
+
+-- Políticas de RLS para caixa_fechamentos
+DROP POLICY IF EXISTS "Permitir tudo para caixa_fechamentos" ON public.caixa_fechamentos;
+CREATE POLICY "Permitir tudo para caixa_fechamentos" 
+ON public.caixa_fechamentos FOR ALL 
+TO anon, authenticated 
+USING (true) 
+WITH CHECK (true);
