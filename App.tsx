@@ -18,6 +18,8 @@ import PatrimonioDashboard from './components/PatrimonioDashboard';
 import DeletionLogsView from './components/DeletionLogsView';
 
 
+import { requestFcmToken } from './services/fcmService';
+
 import { NavItem } from './types';
 import { supabase } from './lib/supabase';
 import { Session } from '@supabase/supabase-js';
@@ -37,6 +39,17 @@ const App: React.FC = () => {
   const [unreadCount, setUnreadCount] = useState(0);
   const [isNotifDrawerOpen, setIsNotifDrawerOpen] = useState(false);
   const [toast, setToast] = useState<{ id: string, title: string, message: string } | null>(null);
+
+  useEffect(() => {
+    if (session?.user) {
+      const email = session.user.email;
+      const userId = session.user.id;
+      const timer = setTimeout(() => {
+        requestFcmToken(email, userId).catch(err => console.error('Erro FCM Token:', err));
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [session]);
 
   // Carregar notificações e escutar em tempo real
   useEffect(() => {
