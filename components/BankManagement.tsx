@@ -121,7 +121,9 @@ const BankManagement: React.FC = () => {
     else alert('Erro ao excluir conta: ' + error.message);
   };
 
-  const totalBalance = banks.reduce((acc, b) => acc + (b.balance || 0), 0);
+  const totalBalance = banks
+    .filter(b => !b.name.toUpperCase().includes('DEVOLVER'))
+    .reduce((acc, b) => acc + (b.balance || 0), 0);
 
   const getBankConfig = (name: string) => {
     const upperName = name.toUpperCase();

@@ -27,7 +27,8 @@ CREATE TABLE IF NOT EXISTS public.caixa_fechamentos (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     data_fechamento DATE UNIQUE NOT NULL, -- Garante apenas um fechamento por dia
     fechado_em TIMESTAMPTZ DEFAULT now(),
-    usuario TEXT NOT NULL
+    usuario TEXT NOT NULL,
+    whatsapp_enviado BOOLEAN DEFAULT FALSE
 );
 
 -- Habilitar RLS
@@ -41,5 +42,9 @@ TO anon, authenticated
 USING (true) 
 WITH CHECK (true);
 
+-- Alteração para adicionar a coluna se a tabela já existir
+ALTER TABLE public.caixa_fechamentos ADD COLUMN IF NOT EXISTS whatsapp_enviado BOOLEAN DEFAULT FALSE;
+
 -- Test commit verification comment
+
 
