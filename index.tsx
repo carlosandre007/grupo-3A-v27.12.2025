@@ -15,11 +15,30 @@ root.render(
   </React.StrictMode>
 );
 
-// Register Service Worker for PWA
+// Unregister Service Workers and clear caches to avoid caching issues on deployments
 if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js')
-      .then(reg => console.log('SW Registered:', reg.scope))
-      .catch(err => console.log('SW Registration failed:', err));
+  navigator.serviceWorker.getRegistrations().then((registrations) => {
+    for (const registration of registrations) {
+      registration.unregister().then((unregistered) => {
+        if (unregistered) {
+          console.log('Service Worker unregistered successfully.');
+        }
+      });
+    }
+  }).catch((err) => {
+    console.error('Error unregistering service workers:', err);
   });
+
+  // Clear Cache Storage
+  if ('caches' in window) {
+    caches.keys().then((names) => {
+      for (const name of names) {
+        caches.delete(name).then(() => {
+          console.log(`Cache storage '${name}' cleared.`);
+        });
+      }
+    }).catch((err) => {
+      console.error('Error clearing cache storage:', err);
+    });
+  }
 }
