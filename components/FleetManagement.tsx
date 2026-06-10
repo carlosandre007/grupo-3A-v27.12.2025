@@ -136,12 +136,40 @@ const FleetManagement: React.FC = () => {
     };
 
     if (isEditing) {
+      const originalMoto = motorcycles.find(m => m.id === formData.id);
+      const statusChanged = originalMoto && originalMoto.status !== formData.status;
+
       const { error } = await supabase
         .from('motorcycles')
         .update(dbData)
         .eq('id', formData.id);
 
       if (!error) {
+        if (statusChanged) {
+          let titulo = '';
+          let mensagem = '';
+          let tipo = '';
+
+          if (formData.status === 'rented') {
+            titulo = 'Bem alugado';
+            mensagem = `Veículo ${formData.code} ${formData.model} foi alugado por ${dbData.client_name || 'Cliente'}.`;
+            tipo = 'aluguel';
+          } else if (formData.status === 'available') {
+            titulo = 'Bem devolvido';
+            mensagem = `Veículo ${formData.code} ${formData.model} foi devolvido e está disponível novamente.`;
+            tipo = 'devolucao';
+          }
+
+          if (titulo) {
+            await supabase.from('notificacoes').insert([{
+              titulo,
+              mensagem,
+              tipo,
+              lida: false
+            }]);
+          }
+        }
+
         await fetchMotorcycles();
         handleCloseModal();
       } else {
@@ -151,6 +179,15 @@ const FleetManagement: React.FC = () => {
       const { error } = await supabase.from('motorcycles').insert([dbData]);
 
       if (!error) {
+        if (formData.status === 'rented') {
+          await supabase.from('notificacoes').insert([{
+            titulo: 'Bem alugado',
+            mensagem: `Veículo ${formData.code} ${formData.model} foi alugado por ${dbData.client_name || 'Cliente'}.`,
+            tipo: 'aluguel',
+            lida: false
+          }]);
+        }
+
         await fetchMotorcycles();
         handleCloseModal();
       } else {

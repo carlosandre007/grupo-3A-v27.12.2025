@@ -126,12 +126,41 @@ const PropertyManagement: React.FC = () => {
     };
 
     if (isEditing) {
+      const originalProp = properties.find(p => p.id === formData.id);
+      const statusChanged = originalProp && originalProp.status !== formData.status;
+
       const { error } = await supabase
         .from('properties')
         .update(dbData)
         .eq('id', formData.id);
 
       if (!error) {
+        if (statusChanged) {
+          const isKitnet = formData.description.toLowerCase().includes('kitnet') || formData.code.toLowerCase().includes('kitnet') || (formData.tipo && formData.tipo.toLowerCase().includes('kitnet'));
+          const designacao = isKitnet ? 'Kitnet' : 'Imóvel';
+          
+          let titulo = '';
+          let mensagem = '';
+          let tipo = '';
+
+          if (formData.status === 'rented') {
+            titulo = 'Bem alugado';
+            mensagem = `${designacao} ${formData.code} foi alugada por ${dbData.tenant || 'Inquilino'}.`;
+            tipo = 'aluguel';
+          } else {
+            titulo = 'Bem devolvido';
+            mensagem = `${designacao} ${formData.code} foi devolvida e está disponível novamente.`;
+            tipo = 'devolucao';
+          }
+
+          await supabase.from('notificacoes').insert([{
+            titulo,
+            mensagem,
+            tipo,
+            lida: false
+          }]);
+        }
+
         await fetchProperties();
         handleCloseModal();
       } else {
@@ -141,6 +170,18 @@ const PropertyManagement: React.FC = () => {
       const { error } = await supabase.from('properties').insert([dbData]);
 
       if (!error) {
+        // Para novos imóveis, se criados já alugados
+        if (formData.status === 'rented') {
+          const isKitnet = formData.description.toLowerCase().includes('kitnet') || formData.code.toLowerCase().includes('kitnet') || (formData.tipo && formData.tipo.toLowerCase().includes('kitnet'));
+          const designacao = isKitnet ? 'Kitnet' : 'Imóvel';
+          await supabase.from('notificacoes').insert([{
+            titulo: 'Bem alugado',
+            mensagem: `${designacao} ${formData.code} foi alugada por ${dbData.tenant || 'Inquilino'}.`,
+            tipo: 'aluguel',
+            lida: false
+          }]);
+        }
+
         await fetchProperties();
         handleCloseModal();
       } else {
