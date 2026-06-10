@@ -6,6 +6,7 @@ import Modal from './Modal';
 import { ReceiptData } from '../utils/receiptGenerator';
 import ReceiptModal from './ReceiptModal';
 import { logDeletion } from '../utils/logger';
+import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, LineChart, Line } from 'recharts';
 
 // Helper to get days of the current week based on a reference date
 const getDaysOfWeek = (current: Date) => {
@@ -52,6 +53,9 @@ const ChargesSchedule: React.FC = () => {
   // States for Receipt Preview
   const [receiptData, setReceiptData] = useState<ReceiptData | null>(null);
   const [isReceiptModalOpen, setIsReceiptModalOpen] = useState(false);
+
+  // Novos estados para a listagem de itens programados
+  const [motorcycles, setMotorcycles] = useState<any[]>([]);
 
   // Derived state
   const weekDays = getDaysOfWeek(currentDate);
@@ -134,11 +138,17 @@ const ChargesSchedule: React.FC = () => {
 
       const { data: propsData } = await supabase
         .from('properties')
-        .select('id, code, description, value, tenant, tenant_id, due_day')
+        .select('id, code, description, value, tenant, tenant_id, due_day, tipo, valor_patrimonial, valor_atual, data_aquisicao, receita_acumulada_anterior, despesa_acumulada_anterior')
         .order('code');
       if (propsData) setProperties(propsData);
+
+      const { data: motosData } = await supabase
+        .from('motorcycles')
+        .select('id, code, model, plate, value, valor_patrimonial, valor_atual, data_aquisicao, receita_acumulada_anterior, despesa_acumulada_anterior, observacoes')
+        .order('code');
+      if (motosData) setMotorcycles(motosData);
     } catch (err) {
-      console.warn('Erro ao carregar clientes/imoveis:', err);
+      console.warn('Erro ao carregar clientes/imoveis/veiculos:', err);
     }
   };
 
@@ -637,6 +647,54 @@ const ChargesSchedule: React.FC = () => {
 
   const dayNames = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
 
+  // ==========================================
+  // ITENS PROGRAMADOS PARA COBRANÇA - LÓGICA
+  // ==========================================
+
+  const getScheduledItems = () => {
+    const list: any[] = [];
+    charges.forEach((c) => {
+      const refLower = (c.ref || '').toLowerCase();
+      const catLower = (c.category_name || '').toLowerCase();
+      const clientLower = (c.clientName || '').toLowerCase();
+      
+      let category = 'Imóveis';
+      let name = '';
+
+      if (
+        refLower.includes('kitnet') || catLower.includes('kitnet') || clientLower.includes('kitnet')
+      ) {
+        category = 'Kitnets';
+        name = c.category_name || c.ref || 'Kitnet';
+      } else if (
+        refLower.includes('veiculo') || refLower.includes('moto') || refLower.includes('fan') || refLower.includes('cg') || catLower.includes('veiculo') ||
+        refLower.startsWith('l0') || clientLower.includes('l00') || clientLower.includes('l01') || clientLower.includes('l02') || clientLower.includes('l03') || clientLower.includes('l04') || clientLower.includes('l05')
+      ) {
+        category = 'Veículos';
+        name = c.clientName;
+      } else {
+        category = 'Imóveis';
+        name = c.category_name || c.ref || 'Imóvel';
+      }
+
+      list.push({
+        id: c.id,
+        name,
+        category
+      });
+    });
+
+    return list;
+  };
+
+  const scheduledItems = getScheduledItems();
+
+  const getItemsForCategorySorted = (cat: string) => {
+    return scheduledItems
+      .filter(item => item.category === cat)
+      .sort((a, b) => a.name.localeCompare(b.name));
+  };
+
   return (
     <div className="space-y-6 pb-8">
       <PageHeader
@@ -847,6 +905,59 @@ const ChargesSchedule: React.FC = () => {
           </button>
         </div>
       </div>
+
+      {/* ==========================================
+          ITENS PROGRAMADOS PARA COBRANÇA
+          ========================================== */}
+      <div className="mt-8 bg-white dark:bg-brand-surface p-6 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-sm">
+        <h3 className="text-sm font-black text-slate-900 dark:text-white mb-6 uppercase tracking-wider">Itens Programados para Cobrança</h3>
+        
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          {/* Imóveis */}
+          <div>
+            <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 dark:border-slate-800 pb-2 mb-3">IMÓVEIS</h4>
+            <ul className="space-y-2">
+              {getItemsForCategorySorted('Imóveis').length > 0 ? (
+                getItemsForCategorySorted('Imóveis').map((item, idx) => (
+                  <li key={idx} className="text-xs font-bold text-slate-700 dark:text-slate-350">{item.name}</li>
+                ))
+              ) : (
+                <li className="text-xs text-slate-400 font-medium italic">Nenhum item programado</li>
+              )}
+            </ul>
+          </div>
+
+          {/* Veículos */}
+          <div>
+            <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 dark:border-slate-800 pb-2 mb-3">VEÍCULOS</h4>
+            <ul className="space-y-2">
+              {getItemsForCategorySorted('Veículos').length > 0 ? (
+                getItemsForCategorySorted('Veículos').map((item, idx) => (
+                  <li key={idx} className="text-xs font-bold text-slate-700 dark:text-slate-355">{item.name}</li>
+                ))
+              ) : (
+                <li className="text-xs text-slate-400 font-medium italic">Nenhum item programado</li>
+              )}
+            </ul>
+          </div>
+
+          {/* Kitnets */}
+          <div>
+            <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 dark:border-slate-800 pb-2 mb-3">KITNETS</h4>
+            <ul className="space-y-2">
+              {getItemsForCategorySorted('Kitnets').length > 0 ? (
+                getItemsForCategorySorted('Kitnets').map((item, idx) => (
+                  <li key={idx} className="text-xs font-bold text-slate-700 dark:text-slate-360">{item.name}</li>
+                ))
+              ) : (
+                <li className="text-xs text-slate-400 font-medium italic">Nenhum item programado</li>
+              )}
+            </ul>
+          </div>
+        </div>
+      </div>
+
+
 
       {/* Edit/Add Charge Modal */}
       <Modal

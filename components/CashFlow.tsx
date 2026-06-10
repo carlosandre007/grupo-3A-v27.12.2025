@@ -43,6 +43,7 @@ const CashFlow: React.FC = () => {
   const [submitting, setSubmitting] = useState(false);
 
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState('all');
+  const [searchDescription, setSearchDescription] = useState('');
 
   // Financial Summaries (Filtered)
   const filteredTransactions = useMemo(() => {
@@ -55,9 +56,22 @@ const CashFlow: React.FC = () => {
       const isDateMatch = y === selectedYear && m === selectedMonth;
       const isCategoryMatch = selectedCategoryFilter === 'all' || t.category === selectedCategoryFilter;
       
-      return isDateMatch && isCategoryMatch;
+      let isDescriptionMatch = true;
+      if (searchDescription) {
+        const terms = searchDescription.toLowerCase().split(/\s+/).filter(Boolean);
+        isDescriptionMatch = terms.every(term => 
+          (t.description || '').toLowerCase().includes(term) ||
+          (t.observation || '').toLowerCase().includes(term) ||
+          (t.category || '').toLowerCase().includes(term) ||
+          (t.responsible || '').toLowerCase().includes(term) ||
+          (t.origem || '').toLowerCase().includes(term) ||
+          (t.source_module || '').toLowerCase().includes(term)
+        );
+      }
+      
+      return isDateMatch && isCategoryMatch && isDescriptionMatch;
     });
-  }, [transactions, selectedMonth, selectedYear, selectedCategoryFilter]);
+  }, [transactions, selectedMonth, selectedYear, selectedCategoryFilter, searchDescription]);
 
   const income = filteredTransactions.reduce((acc, t) => t.type === 'in' ? acc + Number(t.value) : acc, 0);
   const expense = filteredTransactions.reduce((acc, t) => t.type === 'out' ? acc + Number(t.value) : acc, 0);
@@ -356,8 +370,18 @@ const CashFlow: React.FC = () => {
       </div>
 
       <div className="bg-white dark:bg-brand-surface rounded-3xl shadow-sm border border-slate-100 dark:border-slate-800 overflow-hidden">
-        <div className="p-4 md:p-6 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center">
+        <div className="p-4 md:p-6 border-b border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <h3 className="text-base md:text-lg font-black text-slate-900 dark:text-white uppercase tracking-tight">Lançamentos</h3>
+          <div className="relative w-full sm:w-72">
+            <span className="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-lg">search</span>
+            <input
+              type="text"
+              value={searchDescription}
+              onChange={(e) => setSearchDescription(e.target.value)}
+              placeholder="Buscar por descrição..."
+              className="w-full pl-10 pr-4 py-2 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-bold focus:ring-2 focus:ring-primary outline-none transition-all dark:text-white"
+            />
+          </div>
         </div>
 
         {loading ? (

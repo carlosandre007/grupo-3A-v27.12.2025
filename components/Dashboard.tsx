@@ -3,7 +3,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { supabase } from '../lib/supabase';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, BarChart, Bar, Line, ComposedChart, Legend } from 'recharts';
 import { MONTHS } from '../constants';
-import { NavItem, Bank, Transaction, Charge, Category, MonthlyBankMovement } from '../types';
+import { NavItem, Bank, Transaction, Charge, Category, MonthlyBankMovement, FixedCost } from '../types';
 import PageHeader from './PageHeader';
 
 const CATEGORY_COLORS = [
@@ -52,6 +52,7 @@ const Dashboard: React.FC<{ onNavigate: (target: { tab: NavItem, clientId?: stri
   const [charges, setCharges] = useState<Charge[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [monthlyMovements, setMonthlyMovements] = useState<MonthlyBankMovement[]>([]);
+  const [fixedCosts, setFixedCosts] = useState<FixedCost[]>([]);
   const [loading, setLoading] = useState(true);
   const [isBackingUp, setIsBackingUp] = useState(false);
 
@@ -69,13 +70,15 @@ const Dashboard: React.FC<{ onNavigate: (target: { tab: NavItem, clientId?: stri
       { data: bankData },
       { data: chargesData },
       { data: catsData },
-      { data: movementsData }
+      { data: movementsData },
+      { data: fixedCostsData }
     ] = await Promise.all([
       supabase.from('transactions').select('*'),
       supabase.from('banks').select('*'),
       supabase.from('charges').select('*'),
       supabase.from('categories').select('*'),
-      supabase.from('movimentacao_mensal_bancos').select('*')
+      supabase.from('movimentacao_mensal_bancos').select('*'),
+      supabase.from('fixed_costs').select('*')
     ]);
 
     if (transData) setTransactions(transData);
@@ -83,6 +86,7 @@ const Dashboard: React.FC<{ onNavigate: (target: { tab: NavItem, clientId?: stri
     if (chargesData) setCharges(chargesData || []);
     if (catsData) setCategories(catsData || []);
     if (movementsData) setMonthlyMovements(movementsData || []);
+    if (fixedCostsData) setFixedCosts(fixedCostsData || []);
 
     setLoading(false);
   };
@@ -211,6 +215,16 @@ const Dashboard: React.FC<{ onNavigate: (target: { tab: NavItem, clientId?: stri
       topRevenuesData
     };
   }, [transactions, banks, charges, monthlyMovements, selectedMonth, selectedYear, selectedBank, selectedCategory]);
+
+  const debitsToday = useMemo(() => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    const todayStr = `${year}-${month}-${day}`;
+
+    return fixedCosts.filter(c => c.due_date === todayStr && c.status === 'pending');
+  }, [fixedCosts]);
 
   const fetchAlerts = async () => {
     // 1. Check CNH Expiry logic (Updated)
@@ -769,6 +783,93 @@ const Dashboard: React.FC<{ onNavigate: (target: { tab: NavItem, clientId?: stri
             </div>
           </div>
         </div>
+      </div>
+
+      {/* Custos Fixos do Dia */}
+      <div className="bg-white dark:bg-brand-surface p-6 md:p-8 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-800/50">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+          <div className="flex items-center gap-2.5">
+            <div className="w-10 h-10 rounded-xl bg-danger/10 flex items-center justify-center text-danger">
+              <span className="material-symbols-outlined font-black">pending_actions</span>
+            </div>
+            <div>
+              <h3 className="font-black text-slate-900 dark:text-white uppercase tracking-wider text-sm">Custos Fixos do Dia</h3>
+              <p className="text-[10px] text-slate-450 dark:text-slate-500 font-bold uppercase">Débitos a vencer hoje</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-900/50 px-3 py-1.5 rounded-xl border border-slate-100 dark:border-slate-800 self-start sm:self-auto">
+            <span className="material-symbols-outlined text-xs text-slate-400">calendar_today</span>
+            <span className="text-[10px] text-slate-500 dark:text-slate-400 font-black uppercase tracking-wider">
+              {new Date().toLocaleDateString('pt-BR')}
+            </span>
+          </div>
+        </div>
+
+        {debitsToday.length > 0 ? (
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {debitsToday.map(cost => {
+                const [y, m, d] = cost.due_date.split('-');
+                const formattedDate = `${d}/${m}/${y}`;
+                const hasPrice = cost.price !== null && cost.price !== undefined && Number(cost.price) > 0;
+                
+                return (
+                  <div key={cost.id} className="p-4 bg-slate-50 dark:bg-slate-900/40 border border-slate-100 dark:border-slate-800 rounded-2xl flex flex-col justify-between gap-3 group hover:border-danger/30 transition-colors">
+                    <div className="flex justify-between items-start gap-2">
+                      <div className="min-w-0 flex-1">
+                        <p className="text-xs font-black text-slate-900 dark:text-white uppercase truncate" title={cost.name}>
+                          {cost.name}
+                        </p>
+                        <p className="text-[9px] text-slate-400 dark:text-slate-500 font-bold uppercase tracking-wider mt-0.5">
+                          {cost.category || 'Custo Fixo'}
+                        </p>
+                      </div>
+                      <span className="px-2 py-0.5 bg-amber-50 dark:bg-amber-950/20 text-amber-600 dark:text-amber-400 text-[8px] font-black uppercase tracking-wider rounded-md border border-amber-100 dark:border-amber-900/30">
+                        Pendente
+                      </span>
+                    </div>
+
+                    <div className="flex justify-between items-end mt-1 pt-2 border-t border-slate-100/50 dark:border-slate-800/50">
+                      <div>
+                        <p className="text-[8px] text-slate-400 font-black uppercase tracking-wider">Vencimento</p>
+                        <p className="text-[10px] font-bold text-slate-600 dark:text-slate-350">{formattedDate}</p>
+                      </div>
+                      <div className="text-right shrink-0">
+                        {hasPrice ? (
+                          <p className="text-sm font-black text-danger">
+                            {Number(cost.price).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                          </p>
+                        ) : (
+                          <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 italic uppercase">
+                            Valor não informado
+                          </p>
+                        )}
+                        <button
+                          onClick={() => onNavigate({ tab: NavItem.FIXED_COSTS })}
+                          className="text-[9px] font-black text-primary hover:text-primary-dark uppercase tracking-wider mt-1 inline-flex items-center gap-0.5 hover:underline"
+                        >
+                          Pagar <span className="material-symbols-outlined text-[10px] font-black">arrow_forward</span>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            
+            <div className="p-4 bg-danger/5 rounded-2xl flex items-center justify-between border border-danger/10">
+              <span className="text-xs font-black text-danger uppercase tracking-wider">Total Pendente para Hoje</span>
+              <span className="text-base font-black text-danger">
+                {debitsToday.reduce((sum, c) => sum + Number(c.price || 0), 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+              </span>
+            </div>
+          </div>
+        ) : (
+          <div className="p-8 text-center bg-slate-50/50 dark:bg-slate-900/20 rounded-2xl border border-slate-100 dark:border-slate-850 opacity-80 py-10">
+            <span className="material-symbols-outlined text-emerald-500 text-3xl font-black mb-2 block">check_circle</span>
+            <p className="text-xs font-black uppercase text-slate-500 dark:text-slate-400 tracking-wider">Nenhum custo fixo pendente vencendo hoje!</p>
+          </div>
+        )}
       </div>
     </div>
   );

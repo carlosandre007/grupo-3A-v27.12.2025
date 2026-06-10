@@ -115,8 +115,25 @@ const FixedCosts: React.FC = () => {
   const totalPaid = costs.filter(c => c.status === 'paid').reduce((acc, c) => acc + Number(c.price || 0), 0);
 
   const handleUpdatePrice = async (id: string, newPrice: number) => {
+    const cost = costs.find(c => c.id === id);
+    const oldPrice = cost ? Number(cost.price) : 0;
+    
     setCosts(prev => prev.map(c => c.id === id ? { ...c, price: newPrice } : c));
     await supabase.from('fixed_costs').update({ price: newPrice }).eq('id', id);
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      const userName = user?.email || 'Sistema';
+      await supabase.from('auditoria_logs').insert([{
+        usuario: userName,
+        valor_anterior: oldPrice,
+        valor_novo: newPrice,
+        tipo_alteracao: 'Custo Fixo',
+        detalhes: `Preço do custo fixo "${cost?.name}" atualizado de R$ ${oldPrice.toLocaleString('pt-BR')} para R$ ${newPrice.toLocaleString('pt-BR')}`
+      }]);
+    } catch (e) {
+      console.warn('Erro ao registrar log:', e);
+    }
   };
 
   const handleEdit = (cost: FixedCost) => {
@@ -158,9 +175,21 @@ const FixedCosts: React.FC = () => {
         carry_forward_value: formData.carry_forward_value,
       };
 
+      const { data: { user } } = await supabase.auth.getUser();
+      const userName = user?.email || 'Sistema';
+
       if (isEditing && editingId) {
+        const oldCost = costs.find(c => c.id === editingId);
         const { error } = await supabase.from('fixed_costs').update(dbData).eq('id', editingId);
         if (error) throw error;
+
+        await supabase.from('auditoria_logs').insert([{
+          usuario: userName,
+          valor_anterior: oldCost ? Number(oldCost.price) : 0,
+          valor_novo: Number(formData.price) || 0,
+          tipo_alteracao: 'Custo Fixo',
+          detalhes: `Custo fixo "${oldCost?.name}" editado. Nome: ${formData.name}, Categoria: ${formData.category}, Vencimento: ${dueDate}, Novo Valor: R$ ${(Number(formData.price) || 0).toLocaleString('pt-BR')}`
+        }]);
       } else {
         const insertData = {
           ...dbData,
@@ -173,6 +202,14 @@ const FixedCosts: React.FC = () => {
         };
         const { error } = await supabase.from('fixed_costs').insert([insertData]);
         if (error) throw error;
+
+        await supabase.from('auditoria_logs').insert([{
+          usuario: userName,
+          valor_anterior: 0,
+          valor_novo: 0,
+          tipo_alteracao: 'Custo Fixo',
+          detalhes: `Custo fixo recorrente "${formData.name}" configurado para o dia ${dueDayVal} com valor inicial zerado.`
+        }]);
       }
 
       await fetchCosts();
@@ -240,6 +277,20 @@ const FixedCosts: React.FC = () => {
 
       if (costError) throw costError;
 
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        const userName = user?.email || 'Sistema';
+        await supabase.from('auditoria_logs').insert([{
+          usuario: userName,
+          valor_anterior: priceVal,
+          valor_novo: priceVal,
+          tipo_alteracao: 'Custo Fixo',
+          detalhes: `Pagamento do custo fixo "${cost.name}" registrado no valor de R$ ${priceVal.toLocaleString('pt-BR')}`
+        }]);
+      } catch (logErr) {
+        console.warn('Erro ao inserir log:', logErr);
+      }
+
       await fetchCosts();
       alert('Pagamento registrado com sucesso!');
     } catch (err: any) {
@@ -258,8 +309,22 @@ const FixedCosts: React.FC = () => {
     
     if (!confirm('Excluir este custo mensal?')) return;
     try {
+      const costToDelete = costs.find(c => c.id === id);
+      const oldPrice = costToDelete ? Number(costToDelete.price) : 0;
+
       const { error } = await supabase.from('fixed_costs').delete().eq('id', id);
       if (error) throw error;
+
+      const { data: { user } } = await supabase.auth.getUser();
+      const userName = user?.email || 'Sistema';
+      await supabase.from('auditoria_logs').insert([{
+        usuario: userName,
+        valor_anterior: oldPrice,
+        valor_novo: 0,
+        tipo_alteracao: 'Custo Fixo',
+        detalhes: `Custo fixo "${costToDelete?.name}" excluído do sistema. Valor do mês era R$ ${oldPrice.toLocaleString('pt-BR')}`
+      }]);
+
       fetchCosts();
     } catch (err: any) {
       alert('Erro ao excluir: ' + err.message);

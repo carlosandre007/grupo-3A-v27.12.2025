@@ -31,6 +31,12 @@ const PatrimonioDashboard: React.FC = () => {
   const [sortBy, setSortBy] = useState<keyof AssetListItem>('code');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
 
+  // Individual Asset Dashboard States
+  const [selectedAssetForDash, setSelectedAssetForDash] = useState<AssetListItem | null>(null);
+  const [isDashModalOpen, setIsDashModalOpen] = useState(false);
+  const [individualChartData, setIndividualChartData] = useState<any[]>([]);
+  const [totalLogsCount, setTotalLogsCount] = useState(0);
+
   // Edit Modal State
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -60,6 +66,159 @@ const PatrimonioDashboard: React.FC = () => {
     lucroTotal: 0,
     rentabilidadeGeral: 0,
   });
+
+  const [adjustRec, setAdjustRec] = useState('');
+  const [adjustExp, setAdjustExp] = useState('');
+
+  const handleAdjustValue = async (field: 'receita' | 'despesa', operation: 'add' | 'sub') => {
+    const adjustInput = field === 'receita' ? adjustRec : adjustExp;
+    const adjustAmt = parseFloat(adjustInput) || 0;
+    if (adjustAmt <= 0) {
+      alert('Por favor, informe um valor maior que zero para o ajuste.');
+      return;
+    }
+
+    const currentVal = parseFloat(field === 'receita' ? editFormData.receitaAcumuladaAnterior : editFormData.despesaAcumuladaAnterior) || 0;
+    const newVal = operation === 'add' ? currentVal + adjustAmt : Math.max(0, currentVal - adjustAmt);
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      const userName = user?.email || 'Sistema';
+
+      const updateData: any = {};
+      if (field === 'receita') {
+        updateData.receita_acumulada_anterior = newVal;
+      } else {
+        updateData.despesa_acumulada_anterior = newVal;
+      }
+
+      const table = editFormData.category === 'Veículo' ? 'motorcycles' : 'properties';
+      const { error } = await supabase
+        .from(table)
+        .update(updateData)
+        .eq('id', editFormData.id);
+
+      if (error) throw error;
+
+      // Insert audit log
+      const { error: logError } = await supabase.from('auditoria_logs').insert([{
+        usuario: userName,
+        valor_anterior: currentVal,
+        valor_novo: newVal,
+        tipo_alteracao: field === 'receita' ? 'Receita Acumulada' : 'Despesa Acumulada',
+        detalhes: `Ajuste Patrimonial no Ativo ${editFormData.code}: ${operation === 'add' ? 'Adicionado' : 'Subtraído'} R$ ${adjustAmt.toLocaleString('pt-BR')} (Valor anterior R$ ${currentVal.toLocaleString('pt-BR')} -> Novo valor R$ ${newVal.toLocaleString('pt-BR')})`
+      }]);
+
+      if (logError) {
+        console.warn('Erro ao inserir log de auditoria:', logError.message);
+      }
+
+      if (field === 'receita') {
+        setEditFormData(prev => ({ ...prev, receitaAcumuladaAnterior: newVal.toString() }));
+        setAdjustRec('');
+      } else {
+        setEditFormData(prev => ({ ...prev, despesaAcumuladaAnterior: newVal.toString() }));
+        setAdjustExp('');
+      }
+
+      alert('Ajuste patrimonial realizado com sucesso!');
+      fetchData();
+    } catch (err: any) {
+      alert('Erro ao realizar ajuste: ' + err.message);
+    }
+  };
+
+  const handleOpenIndividualDashboard = async (item: AssetListItem) => {
+    setSelectedAssetForDash(item);
+    setIsDashModalOpen(true);
+    
+    let count = 0;
+    const monthlyMap: Record<string, { monthStr: string, monthKey: string, revenue: number, expense: number }> = {};
+
+    const yearMonths = [
+      { key: '2026-01', name: 'Jan' },
+      { key: '2026-02', name: 'Fev' },
+      { key: '2026-03', name: 'Mar' },
+      { key: '2026-04', name: 'Abr' },
+      { key: '2026-05', name: 'Mai' },
+      { key: '2026-06', name: 'Jun' },
+      { key: '2026-07', name: 'Jul' },
+      { key: '2026-08', name: 'Ago' },
+      { key: '2026-09', name: 'Set' },
+      { key: '2026-10', name: 'Out' },
+      { key: '2026-11', name: 'Nov' },
+      { key: '2026-12', name: 'Dez' }
+    ];
+    yearMonths.forEach(m => {
+      monthlyMap[m.key] = { monthStr: m.name, monthKey: m.key, revenue: 0, expense: 0 };
+    });
+
+    try {
+      if (item.category === 'Veículo') {
+        const { data: maintenance } = await supabase
+          .from('motorcycle_maintenance')
+          .select('*')
+          .eq('motorcycle_id', item.id);
+
+        if (maintenance) {
+          count = maintenance.length;
+          maintenance.forEach((r: any) => {
+            if (!r.date) return;
+            const [y, m] = r.date.split('-');
+            const key = `${y}-${m}`;
+            if (monthlyMap[key]) {
+              if (r.type === 'credit') {
+                monthlyMap[key].revenue += Number(r.value) || 0;
+              } else {
+                monthlyMap[key].expense += Number(r.value) || 0;
+              }
+            }
+          });
+        }
+      } else {
+        const { data: propertyPayments } = await supabase
+          .from('property_payments')
+          .select('*')
+          .eq('property_id', item.id);
+
+        const { data: transactions } = await supabase
+          .from('transactions')
+          .select('*')
+          .eq('reference_id', item.id)
+          .eq('type', 'out');
+
+        if (propertyPayments) {
+          count += propertyPayments.length;
+          propertyPayments.forEach((r: any) => {
+            if (!r.date) return;
+            const [y, m] = r.date.split('-');
+            const key = `${y}-${m}`;
+            if (monthlyMap[key]) {
+              monthlyMap[key].revenue += Number(r.amount) || 0;
+            }
+          });
+        }
+
+        if (transactions) {
+          count += transactions.length;
+          transactions.forEach((r: any) => {
+            if (!r.date) return;
+            const [y, m] = r.date.split('-');
+            const key = `${y}-${m}`;
+            if (monthlyMap[key]) {
+              monthlyMap[key].expense += Number(r.value) || 0;
+            }
+          });
+        }
+      }
+    } catch (e) {
+      console.error('Erro ao buscar dados individuais do bem:', e);
+    }
+
+    const chartData = Object.values(monthlyMap).sort((a, b) => a.monthKey.localeCompare(b.monthKey));
+    setIndividualChartData(chartData);
+    setTotalLogsCount(count);
+  };
 
   const fetchData = async () => {
     setLoading(true);
@@ -93,7 +252,7 @@ const PatrimonioDashboard: React.FC = () => {
           let exp = expAnterior; // Start with historical expenses!
           
           if (maintenance) {
-            const records = maintenance.filter((r: any) => r.motorcycle_id === m.id);
+            const records = maintenance.filter((r: any) => r.motorcycle_id === m.id && r.date >= '2026-06-01');
             records.forEach((r: any) => {
               if (r.type === 'credit') {
                 rev += Number(r.value) || 0;
@@ -143,7 +302,7 @@ const PatrimonioDashboard: React.FC = () => {
           // Calculate revenue from property_payments
           let rev = recAnterior; // Start with historical balance!
           if (propertyPayments) {
-            const pays = propertyPayments.filter((r: any) => r.property_id === p.id);
+            const pays = propertyPayments.filter((r: any) => r.property_id === p.id && r.date >= '2026-06-01');
             pays.forEach((r: any) => {
               rev += Number(r.amount) || 0;
             });
@@ -152,7 +311,7 @@ const PatrimonioDashboard: React.FC = () => {
           // Calculate expenses from transactions
           let exp = expAnterior; // Start with historical expenses!
           if (transactions) {
-            const exps = transactions.filter((r: any) => r.reference_id === p.id && r.type === 'out');
+            const exps = transactions.filter((r: any) => r.reference_id === p.id && r.type === 'out' && r.date >= '2026-06-01');
             exps.forEach((r: any) => {
               exp += Number(r.value) || 0;
             });
@@ -601,7 +760,11 @@ const PatrimonioDashboard: React.FC = () => {
                 </thead>
                 <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                   {filteredAssets.map((a) => (
-                    <tr key={a.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/20 transition-colors text-sm">
+                    <tr 
+                      key={a.id} 
+                      onClick={() => handleOpenIndividualDashboard(a)}
+                      className="hover:bg-slate-50/50 dark:hover:bg-slate-800/20 transition-colors text-sm cursor-pointer"
+                    >
                       <td className="px-6 py-4 font-mono font-black text-slate-500">{a.code}</td>
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
@@ -660,7 +823,7 @@ const PatrimonioDashboard: React.FC = () => {
                       </td>
                       <td className="px-6 py-4 text-right">
                         <button
-                          onClick={() => handleOpenEdit(a)}
+                          onClick={(e) => { e.stopPropagation(); handleOpenEdit(a); }}
                           className="px-3 py-1.5 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-200 rounded-xl text-xs font-black hover:scale-105 hover:bg-primary hover:text-slate-900 transition-all flex items-center gap-1 ml-auto"
                         >
                           <span className="material-symbols-outlined text-sm font-bold">edit</span>
@@ -750,28 +913,81 @@ const PatrimonioDashboard: React.FC = () => {
                   <h4 className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-tight">💰 Seção Financeira Histórica</h4>
                   <p className="text-[10px] text-slate-400 font-medium">Informe a receita e despesa acumuladas retroativas (até o último mês fechado) para compor o saldo inicial patrimonial.</p>
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs font-bold text-slate-500 mb-1">Receita Acumulada Anterior</label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                  <div className="p-3 bg-slate-50/50 dark:bg-slate-900/30 rounded-2xl border border-slate-100 dark:border-slate-800">
+                    <label className="block text-xs font-bold text-slate-550 mb-1">Receita Acumulada Anterior</label>
                     <input
                       type="number"
                       step="0.01"
                       value={editFormData.receitaAcumuladaAnterior}
                       onChange={(e) => setEditFormData({ ...editFormData, receitaAcumuladaAnterior: e.target.value })}
-                      className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-slate-800 focus:ring-2 focus:ring-primary outline-none transition-all font-bold"
+                      className="w-full px-4 py-2 bg-white dark:bg-brand-surface rounded-xl border border-slate-200 dark:border-slate-800 focus:ring-2 focus:ring-primary outline-none transition-all font-bold text-sm"
                       placeholder="R$ 0,00"
                     />
+                    <div className="flex gap-1.5 mt-2.5">
+                      <button
+                        type="button"
+                        onClick={() => handleAdjustValue('receita', 'sub')}
+                        className="w-8 h-8 shrink-0 bg-rose-500 text-white font-black rounded-lg text-sm hover:bg-rose-600 transition-colors shadow-sm flex items-center justify-center"
+                        title="Subtrair do valor atual"
+                      >
+                        -
+                      </button>
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={adjustRec}
+                        onChange={(e) => setAdjustRec(e.target.value)}
+                        placeholder="Valor p/ ajustar"
+                        className="flex-1 min-w-0 px-3 py-1 bg-white dark:bg-brand-surface rounded-lg border border-slate-200 dark:border-slate-800 text-[11px] font-bold outline-none text-center"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => handleAdjustValue('receita', 'add')}
+                        className="w-8 h-8 shrink-0 bg-emerald-500 text-white font-black rounded-lg text-sm hover:bg-emerald-600 transition-colors shadow-sm flex items-center justify-center"
+                        title="Somar ao valor atual"
+                      >
+                        +
+                      </button>
+                    </div>
                   </div>
-                  <div>
-                    <label className="block text-xs font-bold text-slate-500 mb-1">Despesa Acumulada Anterior</label>
+
+                  <div className="p-3 bg-slate-50/50 dark:bg-slate-900/30 rounded-2xl border border-slate-100 dark:border-slate-800">
+                    <label className="block text-xs font-bold text-slate-550 mb-1">Despesa Acumulada Anterior</label>
                     <input
                       type="number"
                       step="0.01"
                       value={editFormData.despesaAcumuladaAnterior}
                       onChange={(e) => setEditFormData({ ...editFormData, despesaAcumuladaAnterior: e.target.value })}
-                      className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-slate-800 focus:ring-2 focus:ring-primary outline-none transition-all font-bold"
+                      className="w-full px-4 py-2 bg-white dark:bg-brand-surface rounded-xl border border-slate-200 dark:border-slate-800 focus:ring-2 focus:ring-primary outline-none transition-all font-bold text-sm"
                       placeholder="R$ 0,00"
                     />
+                    <div className="flex gap-1.5 mt-2.5">
+                      <button
+                        type="button"
+                        onClick={() => handleAdjustValue('despesa', 'sub')}
+                        className="w-8 h-8 shrink-0 bg-rose-500 text-white font-black rounded-lg text-sm hover:bg-rose-600 transition-colors shadow-sm flex items-center justify-center"
+                        title="Subtrair do valor atual"
+                      >
+                        -
+                      </button>
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={adjustExp}
+                        onChange={(e) => setAdjustExp(e.target.value)}
+                        placeholder="Valor p/ ajustar"
+                        className="flex-1 min-w-0 px-3 py-1 bg-white dark:bg-brand-surface rounded-lg border border-slate-200 dark:border-slate-800 text-[11px] font-bold outline-none text-center"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => handleAdjustValue('despesa', 'add')}
+                        className="w-8 h-8 shrink-0 bg-emerald-500 text-white font-black rounded-lg text-sm hover:bg-emerald-600 transition-colors shadow-sm flex items-center justify-center"
+                        title="Somar ao valor atual"
+                      >
+                        +
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -794,6 +1010,119 @@ const PatrimonioDashboard: React.FC = () => {
                 {submitting ? <span className="material-symbols-outlined animate-spin">sync</span> : 'Salvar Alterações Patrimoniais'}
               </button>
             </form>
+          </Modal>
+
+          {/* Dashboard Individual do Bem Modal */}
+          <Modal
+            isOpen={isDashModalOpen}
+            onClose={() => setIsDashModalOpen(false)}
+            title={`📈 Painel do Bem: ${selectedAssetForDash?.code}`}
+          >
+            {selectedAssetForDash && (
+              <div className="space-y-6 max-h-[80vh] overflow-y-auto pr-2 custom-scrollbar">
+                
+                {/* Status Financeiro & Ponto de Equilíbrio Banner */}
+                {(() => {
+                  const isLucrativo = selectedAssetForDash.receitaAcumulada >= selectedAssetForDash.despesaAcumulada;
+                  const diff = Math.abs(selectedAssetForDash.receitaAcumulada - selectedAssetForDash.despesaAcumulada);
+                  return (
+                    <div className={`p-5 rounded-2xl border flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 ${
+                      isLucrativo 
+                        ? 'bg-green-55/50 dark:bg-green-950/15 border-green-200 dark:border-green-900/30' 
+                        : 'bg-rose-55/50 dark:bg-rose-950/15 border-rose-200 dark:border-rose-900/30'
+                    }`}>
+                      <div className="flex items-center gap-3">
+                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black ${
+                          isLucrativo ? 'bg-green-500 text-white' : 'bg-rose-500 text-white'
+                        }`}>
+                          <span className="material-symbols-outlined text-xl">
+                            {isLucrativo ? 'trending_up' : 'trending_down'}
+                          </span>
+                        </div>
+                        <div>
+                          <h4 className={`text-sm font-black uppercase tracking-wider ${isLucrativo ? 'text-green-700 dark:text-green-400' : 'text-rose-700 dark:text-rose-400'}`}>
+                            {isLucrativo ? 'Operação Lucrativa' : 'Operação Negativa'}
+                          </h4>
+                          <p className="text-[10px] text-slate-400 font-bold uppercase mt-0.5">Status Financeiro Geral</p>
+                        </div>
+                      </div>
+                      <div className="text-left sm:text-right shrink-0">
+                        {isLucrativo ? (
+                          <p className="text-sm font-black text-green-700 dark:text-green-400">
+                            Lucro acumulado de {selectedAssetForDash.lucroLiquido.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                          </p>
+                        ) : (
+                          <p className="text-sm font-black text-rose-700 dark:text-rose-450">
+                            Faltam {diff.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} para atingir o ponto de equilíbrio.
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })()}
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Informações Gerais */}
+                  <div className="bg-slate-50 dark:bg-slate-900/30 p-5 rounded-2xl border border-slate-100 dark:border-slate-800 space-y-4">
+                    <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 dark:border-slate-800 pb-2">Informações Gerais</h4>
+                    <div className="space-y-3 text-xs">
+                      <div className="flex justify-between"><span className="text-slate-400 font-bold uppercase">Nome do Bem:</span><span className="font-black text-slate-800 dark:text-white uppercase truncate max-w-[180px]">{selectedAssetForDash.name}</span></div>
+                      <div className="flex justify-between"><span className="text-slate-400 font-bold uppercase">Código:</span><span className="font-mono font-black text-slate-800 dark:text-white">{selectedAssetForDash.code}</span></div>
+                      <div className="flex justify-between"><span className="text-slate-400 font-bold uppercase">Categoria:</span><span className="font-black text-slate-800 dark:text-white">{selectedAssetForDash.category}</span></div>
+                      <div className="flex justify-between"><span className="text-slate-400 font-bold uppercase">Data de Aquisição:</span><span className="font-black text-slate-600 dark:text-slate-400">{selectedAssetForDash.dataAquisicao ? new Date(selectedAssetForDash.dataAquisicao).toLocaleDateString('pt-BR', {timeZone: 'UTC'}) : '-'}</span></div>
+                      <div className="flex justify-between"><span className="text-slate-400 font-bold uppercase">Valor de Compra:</span><span className="font-black text-slate-800 dark:text-white">{selectedAssetForDash.valorPatrimonial.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span></div>
+                      <div className="flex justify-between"><span className="text-slate-400 font-bold uppercase">Valor Atual:</span><span className="font-black text-slate-800 dark:text-white">{selectedAssetForDash.valorAtual.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span></div>
+                    </div>
+                  </div>
+
+                  {/* Indicadores */}
+                  <div className="bg-slate-50 dark:bg-slate-900/30 p-5 rounded-2xl border border-slate-100 dark:border-slate-800 space-y-4">
+                    <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 dark:border-slate-800 pb-2">Indicadores de Desempenho</h4>
+                    <div className="grid grid-cols-2 gap-3 text-center">
+                      <div className="p-2.5 bg-white dark:bg-brand-surface rounded-xl border border-slate-100 dark:border-slate-800">
+                        <p className="text-[8px] text-slate-400 font-black uppercase">Total Investido</p>
+                        <p className="text-xs font-black text-slate-800 dark:text-white mt-1">R$ {selectedAssetForDash.valorPatrimonial.toLocaleString()}</p>
+                      </div>
+                      <div className="p-2.5 bg-white dark:bg-brand-surface rounded-xl border border-slate-100 dark:border-slate-800">
+                        <p className="text-[8px] text-slate-400 font-black uppercase">Total Recebido</p>
+                        <p className="text-xs font-black text-success mt-1">R$ {selectedAssetForDash.receitaAcumulada.toLocaleString()}</p>
+                      </div>
+                      <div className="p-2.5 bg-white dark:bg-brand-surface rounded-xl border border-slate-100 dark:border-slate-800">
+                        <p className="text-[8px] text-slate-400 font-black uppercase">Lucro Acumulado</p>
+                        <p className="text-xs font-black text-slate-850 dark:text-white mt-1">R$ {selectedAssetForDash.lucroLiquido.toLocaleString()}</p>
+                      </div>
+                      <div className="p-2.5 bg-white dark:bg-brand-surface rounded-xl border border-slate-100 dark:border-slate-800">
+                        <p className="text-[8px] text-slate-400 font-black uppercase">ROI (%)</p>
+                        <p className="text-xs font-black text-primary mt-1">{selectedAssetForDash.payback.toFixed(1)}%</p>
+                      </div>
+                      <div className="col-span-2 p-2.5 bg-white dark:bg-brand-surface rounded-xl border border-slate-100 dark:border-slate-800">
+                        <p className="text-[8px] text-slate-400 font-black uppercase">Quantidade de Lançamentos</p>
+                        <p className="text-xs font-black text-slate-800 dark:text-white mt-1">{totalLogsCount} Registros</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Grafico de Evolução Mensal */}
+                <div className="bg-white dark:bg-brand-surface p-5 rounded-2xl border border-slate-150 dark:border-slate-800 shadow-sm">
+                  <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Evolução Mensal em 2026 (Receitas vs Despesas)</h4>
+                  <div className="h-64">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={individualChartData}>
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
+                        <XAxis dataKey="monthStr" stroke="#94A3B8" fontSize={10} fontStyle="bold" />
+                        <YAxis stroke="#94A3B8" fontSize={10} />
+                        <Tooltip formatter={(value) => `R$ ${Number(value).toLocaleString()}`} />
+                        <Legend />
+                        <Bar dataKey="revenue" name="Receita" fill="#10B981" radius={[4, 4, 0, 0]} />
+                        <Bar dataKey="expense" name="Despesa" fill="#EF4444" radius={[4, 4, 0, 0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+
+              </div>
+            )}
           </Modal>
         </>
       )}
