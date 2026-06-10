@@ -40,3 +40,6 @@ ON public.caixa_fechamentos FOR ALL
 TO anon, authenticated 
 USING (true) 
 WITH CHECK (true);
+
+-- Test commit verification comment
+
